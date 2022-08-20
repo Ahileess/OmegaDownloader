@@ -70,13 +70,14 @@ class GUIManager( ):
                     dpg.add_menu_item(label="Exit")
                 dpg.add_separator()
                 with dpg.menu(label="Options"):
-                    dpg.add_menu_item(label="Save Queue", enabled=False)
+                    dpg.add_menu_item(label="Save Queue", callback=self.SaveToFile)
                     dpg.add_separator()
-                    dpg.add_menu_item(label="Load Queue", enabled=False)
+                    dpg.add_menu_item(label="Load Queue", callback=lambda: dpg.show_item("fileDialog"))
                     dpg.add_separator()
                     dpg.add_menu_item(tag="InstCompMenu", label="Installed Components", callback=self.GetInstalledComponents)
                     dpg.add_separator()
-                    
+                dpg.add_separator()
+                dpg.add_menu_item(label="Storage", callback=self.OpenStorage)
                 dpg.add_separator()
                 
 
@@ -169,6 +170,11 @@ class GUIManager( ):
             with dpg.child_window():
                 with dpg.group(tag="InstalledList"):
                     pass
+        
+        with dpg.file_dialog(tag="fileDialog", directory_selector=False, show=False, callback=self.LoadFromFile, width=600, height=600):
+            dpg.add_file_extension(".txt", color=(150, 255, 150, 255), custom_text="[Text]")
+
+
 
         #Описание темы для UI
         with dpg.theme() as global_theme:
@@ -269,7 +275,7 @@ class GUIManager( ):
                 for p in BuildingsList:
                     with dpg.table_row():
                         with dpg.table_cell():
-                            dpg.add_button(label=p, callback=self.AddItemQueue, user_data=p)
+                            dpg.add_button(label=p, callback=self.AddItemQueue, user_data=[p, self.mng.CurrentProject.name])
         pass
     
     def LoadDistrs(self, sender, app_data, user_data):
@@ -284,10 +290,10 @@ class GUIManager( ):
     
     def ManualAddItemQueue(self, sender, app_data, user_data):
         ref = dpg.get_value("AddManualItemQueue")
-        if(ref.find("@automiq/build") == -1):
+        if(ref.find("/build") == -1):
             self.ee.emit("OutputLog", "Invalid reference was added")
         else:
-            self.mng.AddItemQueue(ref, True)
+            self.mng.AddItemQueue([ref, ""], True)
         pass
     
     def AddItemQueue(self, sender, app_data, user_data):
@@ -448,6 +454,23 @@ class GUIManager( ):
             self.DeleteComponentList.clear()
         else:
             self.ee.emit("OutputLog", "Uninstall Queue is empty!")
+
+    def OpenStorage(self):
+        self.mng.OpenStorage()
+        pass
+
+    def SaveToFile(self):
+        self.mng.SaveComponentToFile()
+        pass
+
+
+    def LoadFromFile(self, sender, app_data):
+        pathFile = app_data['file_path_name']
+        listRefs = self.mng.LoadComponentFromFile(pathFile)
+        for r in listRefs:
+            self.mng.AddItemQueue([r, ""], True)
+        pass
+
 
     def Run(self):
         self.MainWindow()

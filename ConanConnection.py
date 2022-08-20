@@ -18,7 +18,6 @@ class ConanParser:
     
     def GetVersionsList(self, projectName, rep: str):
         try:
-            #подумать над удалением дубликатов и подгрузкой другого бренда.
             stream = os.popen("conan search *" + projectName + "* -r " + rep)
             listVer =[]
             for ref in stream:
@@ -26,13 +25,13 @@ class ConanParser:
                     return []
 
                 if (ref.find("trei") == -1):
-                    if (ref not in self.path):
-                        self.path.append(ref[:-1])
+                    self.path.append(ref[:-1])
 
                 version = re.search(r'/\d[\w.+-]*[+.]b\d', ref)
                 if (version):
                     listVer.append(version.group()[1:-3])
-                
+
+            self.path = list(set(self.path))    
             result = set(listVer)
             stream.close()
         except: 
@@ -41,8 +40,10 @@ class ConanParser:
 
         return sorted(list(result))
 
-    def GetBuilds(self, version: str):
-        str = r'/' + version.replace("+", "\+") + r'[+.]b[\w]*[.]r\w*@'
+    #Ситуация говна, подгрузка другого бренда заставляет передавать сюда имя проекта, и получать список с этим именем,
+    #а редактировать повторно в менеджере, удаляя имя проекта. Надо подумать, как адекватно работать с разными берндами.
+    def GetBuilds(self, version: str, projName: str):
+        str = projName + r'/' + version.replace("+", "\+") + r'[+.]b[\w]*[.]r\w*@'
         listBuild = []
         for ref in self.path:
             
@@ -233,3 +234,25 @@ class ConanParser:
         self.ee.emit("ThreadEnd")
         pass
     
+    def OpenExplorer(self, path):
+        try:
+            stream = os.popen("explorer " + path)
+            stream.close()
+            pass
+        except:
+            self.ee.emit("Logger", "Can't open explorer!")
+            pass
+    
+    def SaveQueueToFile(self, queue, path):
+        with open(path + r'\References.txt', 'w') as f:
+            for ref in queue:
+                f.write(f"{ref}\n")
+        self.ee.emit("Logger", "Save queue to file: " + path + r'\References.txt')
+        pass
+
+    def LoadQueueFromFile(self, filePath):
+        with open(filePath, 'r') as f:
+            refs = f.readlines()
+            refs = [ref.rstrip() for ref in refs]
+        self.ee.emit("Logger", "Load queue from file: " + filePath)
+        return refs

@@ -1,7 +1,4 @@
 '''Прослойка между GUI и бекэндом для подготовки отображаемых данных и обработки передаваемых команд. '''
-
-from queue import Full
-import GUI
 import Settings
 import ProjectClass as pclass
 import ConanConnection as CC
@@ -46,7 +43,12 @@ class Manager():
         return vList
 
     def LoadBuilds(self, name: str):
-        return self.parser.GetBuilds(name)
+        listB = []
+        for l in self.parser.GetBuilds(name, self.CurrentProject.name):
+            idx = l.find(r'/')
+            listB.append(l[idx + 1:])
+        return listB
+        
 
     def LoadDistrs(self):
         """Должны знать куда скачивать, хеш, репозиторий"""
@@ -82,16 +84,17 @@ class Manager():
                 self.ee.emit("OutputLog", text)
                 
         
-    def AddItemQueue(self, build: str, FullRef: bool = False):
+    def AddItemQueue(self, build, FullRef: bool = False):
         if (FullRef):
-            self.downloadQueue.append(build)
-            self.ee.emit("ShowItemQueue", build)
+            self.downloadQueue.append(build[0])
+            self.ee.emit("ShowItemQueue", build[0])
             return
 
         full_ref = ""
         for r in self.parser.path:
-            if (r.rfind(build) != -1):
-                full_ref = r
+            if (r.rfind(build[0]) != -1):
+                if (r.rfind(build[1]) != -1):
+                    full_ref = r
             pass
         
         if(full_ref == ""):
@@ -103,6 +106,8 @@ class Manager():
         self.ee.emit("ShowItemQueue", full_ref)
 
     def DeleteItemQueue(self, ref: str):
+        if (len(self.downloadQueue) <= 0):
+            return
         self.downloadQueue.remove(ref)
         self.ee.emit("RefreshQueue", self.downloadQueue)
 
@@ -169,4 +174,17 @@ class Manager():
         self.uninstallQueue = uninstComList.copy()
         self.parser.UninstallComponents(self.uninstallQueue)
 
+    def OpenStorage(self):
+        self.parser.OpenExplorer(self.objSetting.downloadFolder)
+        pass
+
+    def SaveComponentToFile(self):
+        if(len(self.downloadQueue) <= 0):
+            self.ee.emit("OutpuLog", "Errore! Queue is empty!")
+            return
         
+        self.parser.SaveQueueToFile(self.downloadQueue, self.objSetting.downloadFolder)
+        pass
+
+    def LoadComponentFromFile(self, pathFile):
+        return self.parser.LoadQueueFromFile(pathFile)
