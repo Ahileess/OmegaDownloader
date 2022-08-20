@@ -1,0 +1,20 @@
+{
+    "Repository": "Automiq",
+    "Path": "D:\\kekl",
+    "OS":{
+        "Windows": true,
+        "Linux": true},
+    "Projects": [
+        {"name":"Alpha.HMI-Distro",
+        "folder": "Alpha.HMI-Distro",
+        "activePath" : true}
+        ,
+        {"name":"Alpha.Server-Distro",
+        "folder": "Alpha.Server-Distro",
+        "activePath" : false}
+        ,   
+        {"name":"Alpha.Security-Distr",
+        "folder": "Alpha.Security-Distr",
+        "activePath" : false}
+    ]
+}
