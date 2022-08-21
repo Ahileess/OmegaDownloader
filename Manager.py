@@ -164,6 +164,12 @@ class Manager():
         except:
             self.ee.emit("OutputLog", "Component isn't in Queue! You're wizard!")
         pass
+    
+    def SaveInstallToFile(self, compName):
+        self.parser.SaveInstallComponentToFile(compName, self.objSetting.downloadFolder)
+        pass
+
+
 
     def ClearUninstallQueue(self):
         self.uninstallQueue.clear()

@@ -233,7 +233,28 @@ class ConanParser:
         self.ee.emit("Logger", "Unistall Finished!")
         self.ee.emit("ThreadEnd")
         pass
-    
+
+    #Получаем +- верную ссылку, если не брать в расчет релизы и нестандартные названия.
+    def SaveInstallComponentToFile(self, queue, path):
+        try:
+            with open(path + r'\Alpha.txt', 'w') as f:
+                for c in queue:
+                    idx = c.find(" ")
+                    name = c[:idx]
+                    prefix = ""
+                    if ((name == "Alpha.Domain") | (name == "Alpha.Security") | (name == "Alpha.HMI.Tables") | 
+                    (name == "Alpha.HMI.Security") | (name == "Alpha.HMI.Charts")):
+                        prefix = "-Distr/"
+                    else:
+                        prefix = "-Distro/"
+                    var = re.search(r' [\d].*', c)[0][1:]
+                    ref = name+prefix+var+r"@automiq/build"
+                    f.write(f"{ref}\n")
+            self.ee.emit("Logger", "Success! File was save!")
+        except:
+            self.ee.emit("Logger", "Error! File didn't save.")
+        pass
+
     def OpenExplorer(self, path):
         try:
             stream = os.popen("explorer " + path)

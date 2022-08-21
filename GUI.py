@@ -46,6 +46,7 @@ class GUIManager( ):
     def __init__(self, mng: Manager, eventEmit:EventEmitter) -> None:
         self.WindowManager = []
         self.DeleteComponentList = []
+        self.DeleteQueueItems = []
         self.mng = mng
         self.ee = eventEmit
         self.listVersions = ""
@@ -264,23 +265,48 @@ class GUIManager( ):
 
     def LoadBuilds(self, sender, app_data, user_data):
         BuildingsList = self.mng.LoadBuilds(user_data)
+        uuid = dpg.generate_uuid()
+        buttonsBuild = []
         mousepos = dpg.get_mouse_pos()
         mousepos[0] += 200
         with dpg.window(label=user_data, pos=mousepos, height=390):
-            with dpg.table(header_row=False, row_background=True,
+            
+            with dpg.table(tag = uuid, header_row=False, row_background=True,
                         borders_innerH=True, borders_outerH=True, borders_innerV=True,
                         borders_outerV=True):
                 dpg.add_table_column()
 
                 for p in BuildingsList:
-                    with dpg.table_row():
+                    rowuuid = dpg.generate_uuid()
+                    buttonsBuild.append({"Uid": rowuuid, "Label": p})
+                    with dpg.table_row(tag=rowuuid):
                         with dpg.table_cell():
-                            dpg.add_button(label=p, callback=self.AddItemQueue, user_data=[p, self.mng.CurrentProject.name])
+                            (dpg.add_button(label=p, callback=self.AddItemQueue, user_data=[p, self.mng.CurrentProject.name]))
+        
+        dpg.add_input_text(before=uuid, callback=self.FilterBuilds, user_data=buttonsBuild, width=-5)
+        pass
+
+    def FilterBuilds(self, sender, app_data, user_data):
+        filter = dpg.get_value(sender)
+
+        if (filter == ""):
+            for i in user_data:
+                dpg.configure_item(i["Uid"], show=True)
+            return
+
+        for i in user_data:
+            lbl = i["Label"]
+            if (lbl.find(filter) == -1):
+                dpg.configure_item(i["Uid"], show=False)
+            else:
+                dpg.configure_item(i["Uid"], show=True)
         pass
     
     def LoadDistrs(self, sender, app_data, user_data):
         dpg.configure_item("Loggerindi", show=True)
         dpg.configure_item("IndiLabel", show=True)
+        for x in self.DeleteQueueItems:
+            dpg.configure_item(x, show=False)
         
         self.mng.LoadDistrs()
         self.ClearQueue(sender, app_data, user_data)
@@ -291,23 +317,25 @@ class GUIManager( ):
     def ManualAddItemQueue(self, sender, app_data, user_data):
         ref = dpg.get_value("AddManualItemQueue")
         if(ref.find("/build") == -1):
-            self.ee.emit("OutputLog", "Invalid reference was added")
+            self.ee.emit("OutputLog", "Invalid reference wasn't added")
         else:
             self.mng.AddItemQueue([ref, ""], True)
-        pass
+        
+        dpg.set_value("AddManualItemQueue", "")
     
     def AddItemQueue(self, sender, app_data, user_data):
         self.mng.AddItemQueue(user_data)
         pass
 
     def ShowItemQueue(self, ref:str, error:str = ""):
-
+        self.DeleteQueueItems.clear()
         with dpg.group(parent="Queue", horizontal=True):
-            dpg.add_button(label='X', width=20, height=20, callback=self.DeleteItemQueue, user_data=ref)
+            self.DeleteQueueItems.append(
+                dpg.add_button(label='X', width=20, height=20, callback=self.DeleteItemQueue, user_data=ref)
+            )
+
             size = dpg.get_text_size(ref)[0] + 20
             dpg.add_input_text(default_value=ref, enabled=False, width=size)
-            
-        pass
 
     def DeleteItemQueue(self, sender, app_data, user_data):
         self.mng.DeleteItemQueue(user_data)
@@ -318,14 +346,16 @@ class GUIManager( ):
         pass
     
     def RefreshQueue(self, queue: List):
-        rows = dpg.get_item_children("Queue", 1)
-        for n in rows:
-            dpg.delete_item(n)
+        try:
+            rows = dpg.get_item_children("Queue", 1)
+            for n in rows:
+                dpg.delete_item(n)
 
-        if(len(queue) > 0):
-            for i in queue:
-                self.ShowItemQueue(i)
-        
+            if(len(queue) > 0):
+                for i in queue:
+                    self.ShowItemQueue(i)
+        except:
+            pass    
 
     def OpenSettings(self, sender, app_data, user_data):
         self.SettingsID = []
@@ -431,11 +461,13 @@ class GUIManager( ):
                 dpg.add_text(default_value=comp["name"] + " : " + comp["version"])
                 dpg.add_checkbox(label="Delete", callback=self.SetUnistallQueue, user_data=comp["name"])
             dpg.add_separator(parent="InstalledList")
-
-        dpg.add_button(parent="InstalledList", label="Delete", callback=self.UninstallComponents)
+        with dpg.group(horizontal=True, parent="InstalledList"):
+            dpg.add_button(label="Delete", callback=self.UninstallComponents)
+            dpg.add_button(tag="SaveInstComp", label="Save", callback=self.SaveInstallComponentToFile)
         dpg.configure_item("InstalledComponent", show=True)
         dpg.configure_item("RefreshUninst", enabled=True)
         dpg.configure_item("InstCompMenu", enabled=True)
+        dpg.configure_item("SaveInstComp", enabled=True)
         pass
 
     def SetUnistallQueue(self, sender, app_data, user_data):
@@ -450,10 +482,19 @@ class GUIManager( ):
             dpg.configure_item(sender, enabled=False)
             dpg.configure_item("RefreshUninst", enabled=False)
             dpg.configure_item("InstCompMenu", enabled=False)
+            dpg.configure_item("SaveInstComp", enabled=False)
             self.mng.Uninstall(self.DeleteComponentList)
             self.DeleteComponentList.clear()
         else:
             self.ee.emit("OutputLog", "Uninstall Queue is empty!")
+
+
+    def SaveInstallComponentToFile(self, sender, app_data, user_data):
+        if (len(self.DeleteComponentList) > 0):
+            self.mng.SaveInstallToFile(self.DeleteComponentList)
+        else:
+            self.ee.emit("OutputLog", "Uninstall Queue is empty!")
+        pass
 
     def OpenStorage(self):
         self.mng.OpenStorage()

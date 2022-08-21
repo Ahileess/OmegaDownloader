@@ -35,9 +35,6 @@ def on_press(key):
             dpg.set_viewport_max_height(hm)
             dpg.set_viewport_max_width(wm)
             toggle = True
-             
-        print(dpg.get_viewport_configuration("MainWindow"))
-
     pass
 
 def listen():
