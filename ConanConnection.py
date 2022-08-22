@@ -22,6 +22,7 @@ class ConanParser:
             listVer =[]
             for ref in stream:
                 if(ref.find("Please log") != -1):
+                    self.ee.emit("Logger", ref)
                     return []
 
                 if (ref.find("trei") == -1):
@@ -54,7 +55,6 @@ class ConanParser:
 
     def GetHash(self, ref:str, OS="Windows"):
         hash = ""
-        print("conan info " + ref + "-s os=" + OS + " Kekl")
         stream = os.popen("conan info " + ref + " -s os=" + OS)
         print("HASH:")
         for p in stream:
@@ -196,7 +196,7 @@ class ConanParser:
             else:
                 stream = os.popen("conan user " + login + " -p " + password + " -r " + repo)
             for i in stream:
-                print(i)
+                self.ee.emit("Logger", i)
 
             stream.close()
         except:
@@ -247,7 +247,7 @@ class ConanParser:
                         prefix = "-Distr/"
                     else:
                         prefix = "-Distro/"
-                    var = re.search(r' [\d].*', c)[0][1:]
+                    var = re.search(r' [\dt].*', c)[0][1:]
                     ref = name+prefix+var+r"@automiq/build"
                     f.write(f"{ref}\n")
             self.ee.emit("Logger", "Success! File was save!")
