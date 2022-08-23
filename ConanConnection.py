@@ -77,8 +77,10 @@ class ConanParser:
             return str.format(full_ref + " not find distr for OS: " + OS + " in repo: " + rep)
         try:
             hash = self.GetHash(full_ref, OS)
-            self.ee.emit("Logger", "conan download " + full_ref + ":" + hash + " -r " + rep)
-            stream = os.popen("conan download " + full_ref + ":" + hash + " -r " + rep)
+            if (hash != ""):
+                hash = ":" + hash
+            self.ee.emit("Logger", "conan download " + full_ref + hash + " -r " + rep)
+            stream = os.popen("conan download " + full_ref + hash + " -r " + rep)
             for i in stream:
                 self.ee.emit("Logger", i) #Провести валидацию на сообщение "ERROR: Binary package not found:"
                 
