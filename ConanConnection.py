@@ -103,12 +103,12 @@ class ConanParser:
                 shutil.copytree(pathCach/'msi', target_path/'msi', dirs_exist_ok=True)
 
             if ((pathCach / 'distr//deb').exists()):
-                shutil.copytree(pathCach/'distr//deb', target_path/'deb')
+                shutil.copytree(pathCach/'distr//deb', target_path/'deb', dirs_exist_ok=True)
             elif ((pathCach / 'deb').exists()):
                 shutil.copytree(pathCach/'deb', target_path/'deb', dirs_exist_ok=True)
 
             if ((pathCach / 'distr//rpm').exists()):
-                shutil.copytree(pathCach/'distr//rpm', target_path/'rpm')
+                shutil.copytree(pathCach/'distr//rpm', target_path/'rpm', dirs_exist_ok=True)
             elif ((pathCach / 'rpm').exists()):
                 shutil.copytree(pathCach/'rpm', target_path/'rpm', dirs_exist_ok=True)
         except PermissionError:
@@ -132,7 +132,7 @@ class ConanParser:
             cachDir /= ref[:a_idx]
             cachDir /= ref [a_idx+1:]
             cachDir /= 'package'
-            cachDir /= hash
+            cachDir /= hash[1:]
 
             print ("cache: ")
             print(cachDir)
@@ -236,19 +236,33 @@ class ConanParser:
         self.ee.emit("ThreadEnd")
         pass
 
-    #Получаем +- верную ссылку, если не брать в расчет релизы и нестандартные названия.
+
     def SaveInstallComponentToFile(self, queue, path):
         try:
-            with open(path + r'\Alpha.txt', 'w') as f:
+            with open(path + r'\InstalledComponent.txt', 'w') as f:
                 for c in queue:
                     idx = c.find(" ")
+                    if (idx == -1):
+                        continue
                     name = c[:idx]
+                    if((name == "Alpha.Tools") | (name == "Alpha.Alarms") | (name == "Alpha.Trends") |
+                    (name == "AlphaPlatform") | (name == "Alpha.Licensing.Agent")):
+                        continue
+
+                    if (name.find("AccessPoint") != -1):
+                        name = name.replace("AccessPoint", "Server")
+
                     prefix = ""
+
+                    if (c.find("WebViewer") != -1):
+                        prefix="-WebViewer"
+
                     if ((name == "Alpha.Domain") | (name == "Alpha.Security") | (name == "Alpha.HMI.Tables") | 
                     (name == "Alpha.HMI.Security") | (name == "Alpha.HMI.Charts")):
-                        prefix = "-Distr/"
+                        prefix += "-Distr/"
                     else:
-                        prefix = "-Distro/"
+                        prefix += "-Distro/"
+
                     var = re.search(r' [\dt].*', c)[0][1:]
                     ref = name+prefix+var+r"@automiq/build"
                     f.write(f"{ref}\n")

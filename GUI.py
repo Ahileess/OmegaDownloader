@@ -1,10 +1,3 @@
-from audioop import add
-from cgitb import enable
-from email.policy import default
-from gc import callbacks
-from heapq import heappush
-from subprocess import call
-from turtle import color, title, width
 from typing import List
 import dearpygui.dearpygui as dpg
 from pymitter import EventEmitter
@@ -281,7 +274,7 @@ class GUIManager( ):
                     buttonsBuild.append({"Uid": rowuuid, "Label": p})
                     with dpg.table_row(tag=rowuuid):
                         with dpg.table_cell():
-                            (dpg.add_button(label=p, callback=self.AddItemQueue, user_data=[p, self.mng.CurrentProject.name]))
+                            dpg.add_button(label=p, callback=self.AddItemQueue, user_data=[p, self.mng.CurrentProject.name])
         
         dpg.add_input_text(before=uuid, callback=self.FilterBuilds, user_data=buttonsBuild, width=-5)
         pass
@@ -306,13 +299,14 @@ class GUIManager( ):
         dpg.configure_item("Loggerindi", show=True)
         dpg.configure_item("IndiLabel", show=True)
         for x in self.DeleteQueueItems:
-            dpg.configure_item(x, show=False)
+            dpg.delete_item(x)
         
         self.mng.LoadDistrs()
         self.ClearQueue(sender, app_data, user_data)
 
         dpg.configure_item("Loggerindi", show=False)
         dpg.configure_item("IndiLabel", show=False)
+        self.DeleteQueueItems.clear()
     
     def ManualAddItemQueue(self, sender, app_data, user_data):
         ref = dpg.get_value("AddManualItemQueue")
@@ -328,7 +322,6 @@ class GUIManager( ):
         pass
 
     def ShowItemQueue(self, ref:str, error:str = ""):
-        self.DeleteQueueItems.clear()
         with dpg.group(parent="Queue", horizontal=True):
             self.DeleteQueueItems.append(
                 dpg.add_button(label='X', width=20, height=20, callback=self.DeleteItemQueue, user_data=ref)
@@ -336,8 +329,11 @@ class GUIManager( ):
 
             size = dpg.get_text_size(ref)[0] + 20
             dpg.add_input_text(default_value=ref, enabled=False, width=size)
+            print(self.DeleteQueueItems)
 
     def DeleteItemQueue(self, sender, app_data, user_data):
+        self.DeleteQueueItems.remove(sender)
+        print(self.DeleteQueueItems)
         self.mng.DeleteItemQueue(user_data)
         pass
 
@@ -347,6 +343,7 @@ class GUIManager( ):
     
     def RefreshQueue(self, queue: List):
         try:
+            self.DeleteQueueItems.clear()
             rows = dpg.get_item_children("Queue", 1)
             for n in rows:
                 dpg.delete_item(n)
@@ -396,7 +393,6 @@ class GUIManager( ):
 
     def Logger(self, text:str):
         dpg.set_value("log_out", dpg.get_value("log_out") + "\n" + text)
-
         with dpg.mutex():
             max_scroll = dpg.get_y_scroll_max("above_log_out")
             dpg.set_y_scroll("above_log_out", max_scroll+1)
