@@ -1,4 +1,5 @@
 
+from json import tool
 import threading
 from time import sleep
 import dearpygui.dearpygui as dpg
@@ -10,35 +11,36 @@ from pynput import keyboard
 
 toggle:bool = True
 
-def on_press(key):
+def on_press():
     #TODO: пока не пофиксили это: https://github.com/hoffstadt/DearPyGui/issues/1800
     global wm
     global hm
     global pos
     global toggle
     #применять макс значения до максимайза, а потом возвращать к исходным
-    if(key == keyboard.Key.ctrl_r): # сохранять макс значения 
-        if (toggle):
-            wm = dpg.get_viewport_max_width()
-            hm = dpg.get_viewport_max_height()
-            pos = dpg.get_viewport_pos()
-            dpg.minimize_viewport()
-            dpg.set_viewport_max_height(Def_h)
-            dpg.set_viewport_max_width(Def_w)
-            toggle = False
-        else:
-            dpg.maximize_viewport()
-            dpg.toggle_viewport_fullscreen()
-            dpg.toggle_viewport_fullscreen()
-            dpg.set_viewport_pos(pos)
-            sleep(0.8)
-            dpg.set_viewport_max_height(hm)
-            dpg.set_viewport_max_width(wm)
-            toggle = True
+    if (toggle):
+        wm = dpg.get_viewport_max_width()
+        hm = dpg.get_viewport_max_height()
+        w = dpg.get_viewport_width()
+        h = dpg.get_viewport_height()
+        pos = dpg.get_viewport_pos()
+        dpg.minimize_viewport()
+        dpg.set_viewport_max_height(h)
+        dpg.set_viewport_max_width(w)
+        toggle = False
+    else:
+        dpg.maximize_viewport()
+        dpg.toggle_viewport_fullscreen()
+        dpg.toggle_viewport_fullscreen()
+        dpg.set_viewport_pos(pos)
+        sleep(0.4)
+        dpg.set_viewport_max_height(hm)
+        dpg.set_viewport_max_width(wm)
+        toggle = True
     pass
 
 def listen():
-    with keyboard.Listener(on_press=on_press) as listener:
+    with keyboard.GlobalHotKeys({'<ctrl>+<alt>': on_press}) as listener:
         listener.join()
 
 def mainfunc():
