@@ -194,3 +194,6 @@ class Manager():
 
     def LoadComponentFromFile(self, pathFile):
         return self.parser.LoadQueueFromFile(pathFile)
+
+    def SaveLog(self, log):
+        self.parser.SaveLogToFile(log, self.objSetting.downloadFolder)

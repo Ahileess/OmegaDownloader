@@ -269,7 +269,7 @@ class ConanParser:
                     var = re.search(r' [\dt].*', c)[0][1:]
                     ref = name+prefix+var+r"@automiq/build"
                     f.write(f"{ref}\n")
-            self.ee.emit("Logger", "Success! File was save!")
+            self.ee.emit("Logger", "Success! File saved to " + path + r'\InstalledComponent.txt')
         except:
             self.ee.emit("Logger", "Error! File didn't save.")
         pass
@@ -296,3 +296,9 @@ class ConanParser:
             refs = [ref.rstrip() for ref in refs]
         self.ee.emit("Logger", "Load queue from file: " + filePath)
         return refs
+
+    def SaveLogToFile(self, log, path):
+        with open(path + r'\Log.txt', 'w') as f:
+            f.write(log)
+        
+        self.ee.emit("Logger", "Log saved to Log.txt" + path + r'\Log.txt')

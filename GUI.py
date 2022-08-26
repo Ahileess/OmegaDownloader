@@ -86,6 +86,7 @@ class GUIManager( ):
                 with dpg.child_window(tag="OutputLogger", height=-2):
                     with dpg.group(horizontal=True):
                         dpg.add_text(default_value="Logger")
+                        dpg.add_button(label="Save", callback=self.SaveLog)
                         dpg.add_button(label="Clear", callback=lambda: dpg.set_value("log_out", ""))
                         dpg.add_text(tag="IndiLabel" ,default_value="Download ", show=False)
                         dpg.add_loading_indicator(tag="Loggerindi", style=1, radius=2, circle_count=10, show=False, color=(255,255,255,255))
@@ -478,6 +479,8 @@ class GUIManager( ):
             self.mng.AddItemQueue([r, ""], True)
         pass
 
+    def SaveLog(self):
+        self.mng.SaveLog(dpg.get_value("log_out"))
 
     def Run(self):
         self.MainWindow()
