@@ -213,6 +213,7 @@ class ConanParser:
             for software in get_installed_software():
                 if (software['name'].find("Alpha") != -1):
                     self.installedComponents.append(software)
+            self.installedComponents.sort(key=lambda x:(x["name"]))
         except:
             self.ee.emit("Logger", "Some problems with rights! Open soft with admin rights.")
 

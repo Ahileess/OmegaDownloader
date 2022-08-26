@@ -1,3 +1,4 @@
+from gc import callbacks
 from typing import List
 import dearpygui.dearpygui as dpg
 from pymitter import EventEmitter
@@ -77,7 +78,7 @@ class GUIManager( ):
 
 
             with dpg.group(horizontal=True):
-                with dpg.child_window(width=200, height=600):
+                with dpg.child_window(width=300, height=600):
                     with dpg.child_window(height=65):
                         with dpg.group(tag="LoginPanel"):
                             dpg.add_input_text(tag="outputLogin", enabled=False, width=-1)
@@ -123,8 +124,9 @@ class GUIManager( ):
                         dpg.add_loading_indicator(tag="Loggerindi", style=1, radius=2, circle_count=10, show=False, color=(255,255,255,255))
 
                     dpg.add_separator()
-                    with dpg.child_window(tag="above_log_out", width=-1, horizontal_scrollbar=True):
-                        dpg.add_text(tag="log_out")
+                    with dpg.child_window(tag="above_log_out", width=-1):
+                        dpg.add_text(tag="log_out", wrap=0, tracked=True, track_offset=1)
+                        
                     pass
 
         self.RefreshLogin()
@@ -183,6 +185,10 @@ class GUIManager( ):
                 dpg.add_theme_color(dpg.mvThemeCol_BorderShadow, (0,0,0), category=dpg.mvThemeCat_Core)
                 dpg.add_theme_color(dpg.mvThemeCol_Border, (158,160,162), category=dpg.mvThemeCat_Core)
                 dpg.add_theme_color(dpg.mvThemeCol_WindowBg, (133,135,138), category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_TitleBgCollapsed, (63,70,138), category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_TitleBg, (0,116,131,213), category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_TitleBgActive, (14,100,179), category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_CheckMark, (255,255,255), category=dpg.mvThemeCat_Core)
 
 
                 dpg.add_theme_style(dpg.mvStyleVar_WindowRounding, 12, category=dpg.mvThemeCat_Core)
@@ -393,10 +399,6 @@ class GUIManager( ):
 
     def Logger(self, text:str):
         dpg.set_value("log_out", dpg.get_value("log_out") + "\n" + text)
-        with dpg.mutex():
-            max_scroll = dpg.get_y_scroll_max("above_log_out")
-            dpg.set_y_scroll("above_log_out", max_scroll+1)
-
         pass
 
     def AddNewInputProject(self, sender, app_data, user_data):
@@ -453,13 +455,14 @@ class GUIManager( ):
         dpg.delete_item("InstalledList", children_only=True)
 
         for comp in iComp:
-            with dpg.group(parent="InstalledList", horizontal=True, horizontal_spacing=30):
-                dpg.add_text(default_value=comp["name"] + " : " + comp["version"])
-                dpg.add_checkbox(label="Delete", callback=self.SetUnistallQueue, user_data=comp["name"])
+            with dpg.group(parent="InstalledList", horizontal=True, horizontal_spacing=15):
+                dpg.add_checkbox(callback=self.SetUnistallQueue, user_data=comp["name"])
+                dpg.add_input_text(default_value=comp["name"], readonly=True, width=-2)
             dpg.add_separator(parent="InstalledList")
         with dpg.group(horizontal=True, parent="InstalledList"):
             dpg.add_button(label="Delete", callback=self.UninstallComponents)
             dpg.add_button(tag="SaveInstComp", label="Save", callback=self.SaveInstallComponentToFile)
+
         dpg.configure_item("InstalledComponent", show=True)
         dpg.configure_item("RefreshUninst", enabled=True)
         dpg.configure_item("InstCompMenu", enabled=True)
