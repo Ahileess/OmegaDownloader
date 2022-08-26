@@ -40,7 +40,7 @@ def on_press():
     pass
 
 def listen():
-    with keyboard.GlobalHotKeys({'<ctrl>+<alt>': on_press}) as listener:
+    with keyboard.GlobalHotKeys({('<ctrl>+<alt>+d'): on_press}) as listener:
         listener.join()
 
 def mainfunc():

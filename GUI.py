@@ -1,40 +1,7 @@
-from gc import callbacks
 from typing import List
 import dearpygui.dearpygui as dpg
 from pymitter import EventEmitter
 from Manager import Manager
-""" 
-parser = CC.ConanParser()
-VersionList = parser.GetVersionsList("Alpha.Server-Distro")
-
-
-def ShowBuilds(sender, app_data, user_data):
-    BuildingsList = parser.GetBuildings(str(user_data))
-    with dpg.window(label="Tutorial"):
-        with dpg.table(header_row=False, row_background=True,
-                    borders_innerH=True, borders_outerH=True, borders_innerV=True,
-                    borders_outerV=True):
-
-            dpg.add_table_column()
-
-            for p in BuildingsList:
-                with dpg.table_row():
-                    with dpg.table_cell():
-                        dpg.add_button(label=p)
-def ShowVersions(sender, app_data, user_data):
-    with dpg.window(label="Tutorial"):
-        with dpg.table(header_row=False, row_background=True,
-                    borders_innerH=True, borders_outerH=True, borders_innerV=True,
-                    borders_outerV=True,  tag="but"):
-
-            dpg.add_table_column()
-
-            for p in VersionList:
-                with dpg.table_row():
-                    with dpg.table_cell():
-                        dpg.add_button(label=p, callback=ShowBuilds, user_data=p)
-
-"""
 
 class GUIManager( ):
     def __init__(self, mng: Manager, eventEmit:EventEmitter) -> None:
