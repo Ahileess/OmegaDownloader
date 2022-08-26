@@ -197,3 +197,11 @@ class Manager():
 
     def SaveLog(self, log):
         self.parser.SaveLogToFile(log, self.objSetting.downloadFolder)
+
+    def GetConanStorageSize(self):
+        sbytes = self.parser.ConanStorageSize()
+        sbytes = ((sbytes/ 1024) / 1024) / 1024
+        return sbytes
+
+    def OpenConanStorage(self):
+        self.parser.OpenExplorer(self.parser.GetConanStorage()[:-1])

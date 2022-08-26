@@ -302,3 +302,7 @@ class ConanParser:
             f.write(log)
         
         self.ee.emit("Logger", "Log saved to Log.txt" + path + r'\Log.txt')
+
+    def ConanStorageSize(self):
+        root_directory = pathlib.Path(self.GetConanStorage()[:-1])
+        return sum(f.stat().st_size for f in root_directory.glob('**/*') if f.is_file())

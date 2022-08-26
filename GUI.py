@@ -38,8 +38,13 @@ class GUIManager( ):
                     dpg.add_separator()
                     dpg.add_menu_item(tag="InstCompMenu", label="Installed Components", callback=self.GetInstalledComponents)
                     dpg.add_separator()
+                    with dpg.menu(label="Conan storage"):
+                        dpg.add_menu_item(label="Size", callback=self.ConanStorageSize)
+                        dpg.add_separator()
+                        dpg.add_menu_item(label="Open explorer", callback=self.OpenConanStorage)
+                        dpg.add_separator()
                 dpg.add_separator()
-                dpg.add_menu_item(label="Storage", callback=self.OpenStorage)
+                dpg.add_menu_item(label="Open storage", callback=self.OpenStorage)
                 dpg.add_separator()
                 
 
@@ -481,6 +486,14 @@ class GUIManager( ):
 
     def SaveLog(self):
         self.mng.SaveLog(dpg.get_value("log_out"))
+
+    def ConanStorageSize(self):
+        size = self.mng.GetConanStorageSize()
+        self.Logger(f"Conan storage size: {size} gb")
+    
+    def OpenConanStorage(self):
+        self.mng.OpenConanStorage()
+        
 
     def Run(self):
         self.MainWindow()
