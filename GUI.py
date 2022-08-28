@@ -48,7 +48,6 @@ class GUIManager( ):
                 dpg.add_separator()
                 
 
-
             with dpg.group(horizontal=True):
                 with dpg.child_window(width=300, height=600):
                     with dpg.child_window(height=65):
