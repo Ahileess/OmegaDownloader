@@ -18,11 +18,14 @@ class Manager():
         self.CurrentProject = None
         self.downloadQueue = []
         self.uninstallQueue = []
+        self.history = []
+        self.NodeIdCount:int = 0
 
         self.userName = self.parser.GetUserName(self.Repo)
 
         self.ee.on("Logger", self.Logger)
         self.ee.on("ThreadEnd", self.ClearUninstallQueue)
+        self.ee.on("UpdateHistory", self.HistoryList)
 
     def ProjectsList(self):
         lp = []
@@ -59,6 +62,7 @@ class Manager():
         self.ee.emit("OutputLog", "The queue started to download.")
         #Работаем с копией очереди.
         localQueue = self.downloadQueue.copy()
+
         self.CleareQueue()
 
         for ref in localQueue:
@@ -76,12 +80,19 @@ class Manager():
             if(proj[0]):
                 folder += "\\" + proj[1]
 
-            #берем инфу о необходимых ОС из настроек
-            if (self.objSetting.GetOSEnable("Windows")): 
-                self.parser.DownloadDistrs(ref, "Windows", self.Repo, folder)
+            #берем инфу о необходимых ОС из настроек 0-Вин. 1 - Лин, 2 - Вин и Лин
+            osActive = ""
+            if (self.objSetting.GetOSEnable("Windows")):
+                osActive = "Windows"
                 
             if (self.objSetting.GetOSEnable("Linux")):
-                self.parser.DownloadDistrs(ref, "Linux", self.Repo, folder)
+                if (osActive == "Windows"):
+                    osActive = "Both"
+                else:
+                    osActive = "Linux"
+
+            self.parser.DownloadDistrs(ref, osActive, self.Repo, folder, self.NodeIdCount)
+            self.NodeIdCount += 1
                 
         
     def AddItemQueue(self, build, FullRef: bool = False):
@@ -186,7 +197,7 @@ class Manager():
 
     def SaveComponentToFile(self):
         if(len(self.downloadQueue) <= 0):
-            self.ee.emit("OutpuLog", "Errore! Queue is empty!")
+            self.ee.emit("OutpuLog", "Error! Queue is empty!")
             return
         
         self.parser.SaveQueueToFile(self.downloadQueue, self.objSetting.downloadFolder)
@@ -205,3 +216,19 @@ class Manager():
 
     def OpenConanStorage(self):
         self.parser.OpenExplorer(self.parser.GetConanStorage()[:-1])
+
+    def HistoryList(self, Nodeid:int, ref:str, OS:str, active:str): 
+        for node in self.history:
+            if ((Nodeid == node['id']) & (OS == node['os'])):
+                node['active'] = active
+                self.ee.emit("UpdateHistoryOut")
+                return
+            
+        self.history.append({"id": Nodeid, "ref": ref, "os": OS, "active": active})
+        self.ee.emit("UpdateHistoryOut")
+        pass
+    
+    def ClearHistoryList(self):
+        self.history.clear()
+        self.ee.emit("UpdateHistoryOut")
+        pass

@@ -18,6 +18,7 @@ class GUIManager( ):
         self.ee.on("OutputLog", self.Logger)
         self.ee.on("ReloadProjects", self.LoadProjects)
         self.ee.on("RefreshInstall", self.GetInstalledComponents)
+        self.ee.on("UpdateHistoryOut", self.UpdateHistory)
         
         #dpg.configure_app(docking=True, docking_space=False) TODO: Пока не сделают нормальный докинг, выключаем в dpg
         pass
@@ -86,19 +87,27 @@ class GUIManager( ):
                             dpg.add_button(label="Clear", callback=self.ClearQueue)
                         
 
-            with dpg.group():
-                with dpg.child_window(tag="OutputLogger", height=-2):
+            with dpg.group(horizontal=True):
+                with dpg.child_window(tag="OutputLogger", height=-2, width=-580):
                     with dpg.group(horizontal=True):
                         dpg.add_text(default_value="Logger")
                         dpg.add_button(label="Save", callback=self.SaveLog)
                         dpg.add_button(label="Clear", callback=lambda: dpg.set_value("log_out", ""))
-                        dpg.add_text(tag="IndiLabel" ,default_value="Download ", show=False)
-                        dpg.add_loading_indicator(tag="Loggerindi", style=1, radius=2, circle_count=10, show=False, color=(255,255,255,255))
 
                     dpg.add_separator()
                     with dpg.child_window(tag="above_log_out", width=-1):
                         dpg.add_text(tag="log_out", wrap=0, tracked=True, track_offset=1)
                         
+                with dpg.child_window(tag="History", height=-2):
+                    with dpg.group(horizontal=True):
+                        dpg.add_text(default_value="History")
+                        dpg.add_button(label="Clear", callback=self.ClearHistory)
+
+                    dpg.add_separator()
+                    with dpg.child_window(tag="above_history", width=-1):
+                        dpg.add_input_text(tag="history_out", track_offset=1, multiline=True, height=-1, readonly=True)
+
+                    
                     pass
 
         self.RefreshLogin()
@@ -274,18 +283,11 @@ class GUIManager( ):
         pass
     
     def LoadDistrs(self, sender, app_data, user_data):
-        dpg.configure_item("Loggerindi", show=True)
-        dpg.configure_item("IndiLabel", show=True)
         for x in self.DeleteQueueItems:
             dpg.delete_item(x)
-        
         self.mng.LoadDistrs()
-        self.ClearQueue(sender, app_data, user_data)
-
-        dpg.configure_item("Loggerindi", show=False)
-        dpg.configure_item("IndiLabel", show=False)
         self.DeleteQueueItems.clear()
-    
+
     def ManualAddItemQueue(self, sender, app_data, user_data):
         ref = dpg.get_value("AddManualItemQueue")
         if(ref.find("/build") == -1):
@@ -493,6 +495,17 @@ class GUIManager( ):
     def OpenConanStorage(self):
         self.mng.OpenConanStorage()
         
+    def UpdateHistory(self):
+        temp: str = ""
+        for node in self.mng.history:
+            temp = f"{node['id']}|  {node['ref']} {node['os']}  |  {node['active']} \n" + temp
+
+        dpg.set_value("history_out", temp)
+        pass
+
+    def ClearHistory(self):
+        self.mng.ClearHistoryList()
+        pass
 
     def Run(self):
         self.MainWindow()

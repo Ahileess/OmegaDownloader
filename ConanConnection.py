@@ -69,24 +69,40 @@ class ConanParser:
         return hash[:-1]
         
 
-    def DownloadDistrs(self, ref, OS, rep, target_path):
+    def DownloadDistrs(self, ref, OS, rep, target_path, NodeId):
         self.ee.emit("Logger", "Download "+ ref)
-        self.threadUninst = threading.Thread(target=self.DownloadProcess, args=(ref, OS, rep, target_path,))
+        self.threadUninst = threading.Thread(target=self.DownloadInit, args=(ref, OS, rep, target_path, NodeId))
         self.threadUninst.start()
 
-    def DownloadProcess(self, ref, OS, rep, target_path):
-        """Скачивает дистрибутив и перекладывает в нужную папку."""
-
+    def DownloadInit(self, ref, osActive, rep, target_path, NodeId):
+        if (osActive == "Windows"):
+            self.DownloadProcess(ref, "Windows", rep, target_path, NodeId)
+            return
+        if (osActive == "Linux"):
+            self.DownloadProcess(ref, "Linux", rep, target_path, NodeId)
+            return
+        if (osActive == "Both"):
+            self.DownloadProcess(ref, "Windows", rep, target_path, NodeId)
+            self.DownloadProcess(ref, "Linux", rep, target_path, NodeId)
+            return
+        pass
+        
+    def DownloadProcess(self, ref, OS, rep, target_path, NodeId):
+        """Скачивает дистрибутив и перекладывает в нужную папку.""" 
+        self.ee.emit("UpdateHistory", NodeId, ref, OS, "start")
         target_path = pathlib.Path(target_path)
         full_ref = ref
         
         if (OS not in self.CheckOSDistr(full_ref, rep)):
-            return str.format(full_ref + " not find distr for OS: " + OS + " in repo: " + rep)
+            self.ee.emit("Logger", full_ref + " not find distr for OS: " + OS + " in repo: " + rep)
+            self.ee.emit("UpdateHistory", NodeId, ref, OS, "reject")
+            return
         try:
             hash = self.GetHash(full_ref, OS)
             if (hash != ""):
                 hash = ":" + hash
             self.ee.emit("Logger", "conan download " + full_ref + hash + " -r " + rep)
+            self.ee.emit("UpdateHistory", NodeId, ref, OS, "load")
             stream = os.popen("conan download " + full_ref + hash + " -r " + rep)
             for i in stream:
                 self.ee.emit("Logger", i) #Провести валидацию на сообщение "ERROR: Binary package not found:"
@@ -97,7 +113,9 @@ class ConanParser:
 
             pathCach = self.GetFullDistrPath(full_ref, hash)
             if (pathCach == ""):
-                return "Distr path wasn't find. Check your conan."
+                self.ee.emit("Logger", "Distr path wasn't find. Check your conan.")
+                self.ee.emit("UpdateHistory", NodeId, ref, OS, "reject")
+                return 
             
             target_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -108,28 +126,47 @@ class ConanParser:
                 shutil.copytree(pathCach/'distr//msi', target_path/'msi', dirs_exist_ok=True)
             elif ((pathCach / 'msi').exists()):
                 shutil.copytree(pathCach/'msi', target_path/'msi', dirs_exist_ok=True)
+            elif (OS == "Windows"):
+                raise FileNotFoundError('kekl')
 
             if ((pathCach / 'distr//deb').exists()):
                 shutil.copytree(pathCach/'distr//deb', target_path/'deb', dirs_exist_ok=True)
             elif ((pathCach / 'deb').exists()):
                 shutil.copytree(pathCach/'deb', target_path/'deb', dirs_exist_ok=True)
+            elif (OS == "Linux"):
+                raise FileNotFoundError('kekl')
 
             if ((pathCach / 'distr//rpm').exists()):
                 shutil.copytree(pathCach/'distr//rpm', target_path/'rpm', dirs_exist_ok=True)
             elif ((pathCach / 'rpm').exists()):
                 shutil.copytree(pathCach/'rpm', target_path/'rpm', dirs_exist_ok=True)
-        except PermissionError:
-            return "Permission error! Can't move the distr from conan storage."
-        except FileExistsError:
-            return "Error! File already exists with reference: " + full_ref
-        except FileNotFoundError:
-            return "Error! File not found with reference: " + full_ref
-        except OSError:
-            return "Rise system error. Have a good day!"
-        except:
-            return full_ref + " for OS: " + OS + "finished with error"
+            
+            
 
-        return full_ref + " for OS: " + OS + " has been downloaded."
+        except PermissionError:
+            self.ee.emit("UpdateHistory", NodeId, ref, OS, "reject")
+            self.ee.emit("Logger", "Permission error! Can't move the distr from conan storage.")
+            return
+        except FileExistsError:
+            self.ee.emit("UpdateHistory", NodeId, ref, OS, "reject")
+            self.ee.emit("Logger", "Error! File already exists with reference: " + full_ref)
+            return
+        except FileNotFoundError:
+            self.ee.emit("UpdateHistory", NodeId, ref, OS, "reject")
+            self.ee.emit("Logger", "Error! File not found with reference: " + full_ref)
+            return
+        except OSError:
+            self.ee.emit("UpdateHistory", NodeId, ref, OS, "reject")
+            self.ee.emit("Logger", "Rise system error. Have a good day!")
+            return
+        except:
+            self.ee.emit("UpdateHistory", NodeId, ref, OS, "reject")
+            self.ee.emit("Logger", full_ref + " for OS: " + OS + "finished with error")
+            return
+
+        self.ee.emit("UpdateHistory", NodeId, ref, OS, "complete")
+        self.ee.emit("Logger", full_ref + " for OS: " + OS + " has been downloaded.")
+        return
 
     def GetFullDistrPath(self, ref:str, hash:str ):
         print("Ref: " + ref + " Hash: " + hash)
