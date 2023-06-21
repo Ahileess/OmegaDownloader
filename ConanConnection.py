@@ -70,6 +70,11 @@ class ConanParser:
         
 
     def DownloadDistrs(self, ref, OS, rep, target_path):
+        self.ee.emit("Logger", "Download "+ ref)
+        self.threadUninst = threading.Thread(target=self.DownloadProcess, args=(ref, OS, rep, target_path,))
+        self.threadUninst.start()
+
+    def DownloadProcess(self, ref, OS, rep, target_path):
         """Скачивает дистрибутив и перекладывает в нужную папку."""
 
         target_path = pathlib.Path(target_path)

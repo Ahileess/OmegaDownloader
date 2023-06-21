@@ -53,11 +53,15 @@ class Manager():
     def LoadDistrs(self):
         """Должны знать куда скачивать, хеш, репозиторий"""
         if (len(self.downloadQueue) <= 0):
-            self.ee.emit("OutputLog", "The queue is emtpy")
+            self.ee.emit("OutputLog", "The queue is emtpy.")
             return
+    
+        self.ee.emit("OutputLog", "The queue started to download.")
+        #Работаем с копией очереди.
+        localQueue = self.downloadQueue.copy()
+        self.CleareQueue()
 
-        self.ee.emit("OutputLog", "The download started")
-        for ref in self.downloadQueue:
+        for ref in localQueue:
             folder = self.objSetting.downloadFolder
             a_idx = ref.find("/")
             projName = ref[:a_idx]
@@ -72,16 +76,12 @@ class Manager():
             if(proj[0]):
                 folder += "\\" + proj[1]
 
-
-
             #берем инфу о необходимых ОС из настроек
             if (self.objSetting.GetOSEnable("Windows")): 
-                text = self.parser.DownloadDistrs(ref, "Windows", self.Repo, folder)
-                self.ee.emit("OutputLog", text)
+                self.parser.DownloadDistrs(ref, "Windows", self.Repo, folder)
                 
             if (self.objSetting.GetOSEnable("Linux")):
-                text = self.parser.DownloadDistrs(ref, "Linux", self.Repo, folder)
-                self.ee.emit("OutputLog", text)
+                self.parser.DownloadDistrs(ref, "Linux", self.Repo, folder)
                 
         
     def AddItemQueue(self, build, FullRef: bool = False):
