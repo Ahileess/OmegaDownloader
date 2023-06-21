@@ -106,6 +106,10 @@ class ConanParser:
             stream = os.popen("conan download " + full_ref + hash + " -r " + rep)
             for i in stream:
                 self.ee.emit("Logger", i) #Провести валидацию на сообщение "ERROR: Binary package not found:"
+                if ("ERROR: Binary package not found:" in i):
+                    self.ee.emit("Logger", "Binary package not found!")
+                    self.ee.emit("UpdateHistory", NodeId, ref, OS, "reject")
+                    return
                 
             stream.close()
 
@@ -140,7 +144,6 @@ class ConanParser:
                 shutil.copytree(pathCach/'distr//rpm', target_path/'rpm', dirs_exist_ok=True)
             elif ((pathCach / 'rpm').exists()):
                 shutil.copytree(pathCach/'rpm', target_path/'rpm', dirs_exist_ok=True)
-            
             
 
         except PermissionError:

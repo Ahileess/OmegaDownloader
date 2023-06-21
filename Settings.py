@@ -15,6 +15,7 @@ class Settings():
         self.downloadFolder = ""
         self.Repository = ""
         self.OSes = None
+        self.dailyFolder = True
 
         pass
 
@@ -24,6 +25,7 @@ class Settings():
             data = json.load(json_data)
             self.Repository = data["Repository"]
             self.downloadFolder = data["Path"]
+            self.dailyFolder = data["Daily"]
             self.OSes = data["OS"]
             for p in data["Projects"]:
                 proj = projClass.ProjectClass(p["name"], p["folder"], p["activePath"])
@@ -57,6 +59,7 @@ class Settings():
         d = {}
         d["Repository"] = self.Repository
         d["Path"] = self.downloadFolder
+        d["Daily"] = self.dailyFolder
         d["OS"] = self.OSes
         d["Projects"] = projs
 

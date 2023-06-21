@@ -129,10 +129,12 @@ class GUIManager( ):
 
         #Окно настроек
         with dpg.window(tag="SettingsWindow", label="Settings", modal=True, show=False, width=500, height=500, no_close=True):
-            with dpg.child_window(tag="Conan settings", height=130, no_scrollbar=True):
+            with dpg.child_window(tag="Conan settings", height=160, no_scrollbar=True):
                 with dpg.group():
                     dpg.add_input_text(label="Conan repository", tag="RepoOut")
                     dpg.add_input_text(label="Download Folder", tag="PathOut")
+                    dpg.add_checkbox(label="Daily", tag="DailyOut")
+                    dpg.add_separator()
                     with dpg.group():
                         dpg.add_checkbox(label="Windows", tag="checkWindowsOut")
                         dpg.add_checkbox(label="Linux", tag="checkLinuxOut")
@@ -339,6 +341,7 @@ class GUIManager( ):
         setDict = self.mng.OpenSettings()
         dpg.set_value("RepoOut", setDict["Repository"])
         dpg.set_value("PathOut", setDict["Path"])
+        dpg.set_value("DailyOut", setDict["Daily"])
 
         OSes = setDict["OS"]
         windows = OSes["Windows"]
@@ -394,6 +397,7 @@ class GUIManager( ):
         d = {}
         d["Repository"] = dpg.get_value("RepoOut")
         d["Path"] = dpg.get_value("PathOut")
+        d["Daily"] = dpg.get_value("DailyOut")
         d["OS"] = {"Windows": dpg.get_value("checkWindowsOut"), "Linux": dpg.get_value("checkLinuxOut")}
         d["Projects"] = projs
 
@@ -498,7 +502,7 @@ class GUIManager( ):
     def UpdateHistory(self):
         temp: str = ""
         for node in self.mng.history:
-            temp = f"{node['id']}|  {node['ref']} {node['os']}  |  {node['active']} \n" + temp
+            temp = f"{node['id']}|{node['ref']}|{node['os']}| {node['active']} \n" + temp
 
         dpg.set_value("history_out", temp)
         pass

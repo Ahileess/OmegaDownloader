@@ -1,5 +1,6 @@
 '''Прослойка между GUI и бекэндом для подготовки отображаемых данных и обработки передаваемых команд. '''
 import Settings
+from datetime import datetime
 import ProjectClass as pclass
 import ConanConnection as CC
 from pymitter import EventEmitter
@@ -67,6 +68,10 @@ class Manager():
 
         for ref in localQueue:
             folder = self.objSetting.downloadFolder
+            if (self.objSetting.dailyFolder):
+                today = datetime.now()
+                folder += "\\" + today.strftime('%Y_%m_%d')
+
             a_idx = ref.find("/")
             projName = ref[:a_idx]
 
