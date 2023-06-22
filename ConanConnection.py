@@ -89,26 +89,26 @@ class ConanParser:
         
     def DownloadProcess(self, ref, OS, rep, target_path, NodeId):
         """Скачивает дистрибутив и перекладывает в нужную папку.""" 
-        self.ee.emit("UpdateHistory", NodeId, ref, OS, "start")
+        self.ee.emit("UpdateHistory", NodeId, ref, OS, "waiting")
         target_path = pathlib.Path(target_path)
         full_ref = ref
         
         if (OS not in self.CheckOSDistr(full_ref, rep)):
             self.ee.emit("Logger", full_ref + " not find distr for OS: " + OS + " in repo: " + rep)
-            self.ee.emit("UpdateHistory", NodeId, ref, OS, "reject")
+            self.ee.emit("UpdateHistory", NodeId, ref, OS, "failed")
             return
         try:
             hash = self.GetHash(full_ref, OS)
             if (hash != ""):
                 hash = ":" + hash
             self.ee.emit("Logger", "conan download " + full_ref + hash + " -r " + rep)
-            self.ee.emit("UpdateHistory", NodeId, ref, OS, "load")
+            self.ee.emit("UpdateHistory", NodeId, ref, OS, "loading")
             stream = os.popen("conan download " + full_ref + hash + " -r " + rep)
             for i in stream:
                 self.ee.emit("Logger", i) #Провести валидацию на сообщение "ERROR: Binary package not found:"
                 if ("ERROR: Binary package not found:" in i):
                     self.ee.emit("Logger", "Binary package not found!")
-                    self.ee.emit("UpdateHistory", NodeId, ref, OS, "reject")
+                    self.ee.emit("UpdateHistory", NodeId, ref, OS, "failed")
                     return
                 
             stream.close()
@@ -118,7 +118,7 @@ class ConanParser:
             pathCach = self.GetFullDistrPath(full_ref, hash)
             if (pathCach == ""):
                 self.ee.emit("Logger", "Distr path wasn't find. Check your conan.")
-                self.ee.emit("UpdateHistory", NodeId, ref, OS, "reject")
+                self.ee.emit("UpdateHistory", NodeId, ref, OS, "failed")
                 return 
             
             target_path.parent.mkdir(parents=True, exist_ok=True)
@@ -147,27 +147,27 @@ class ConanParser:
             
 
         except PermissionError:
-            self.ee.emit("UpdateHistory", NodeId, ref, OS, "reject")
+            self.ee.emit("UpdateHistory", NodeId, ref, OS, "failed")
             self.ee.emit("Logger", "Permission error! Can't move the distr from conan storage.")
             return
         except FileExistsError:
-            self.ee.emit("UpdateHistory", NodeId, ref, OS, "reject")
+            self.ee.emit("UpdateHistory", NodeId, ref, OS, "failed")
             self.ee.emit("Logger", "Error! File already exists with reference: " + full_ref)
             return
         except FileNotFoundError:
-            self.ee.emit("UpdateHistory", NodeId, ref, OS, "reject")
+            self.ee.emit("UpdateHistory", NodeId, ref, OS, "failed")
             self.ee.emit("Logger", "Error! File not found with reference: " + full_ref)
             return
         except OSError:
-            self.ee.emit("UpdateHistory", NodeId, ref, OS, "reject")
+            self.ee.emit("UpdateHistory", NodeId, ref, OS, "failed")
             self.ee.emit("Logger", "Rise system error. Have a good day!")
             return
         except:
-            self.ee.emit("UpdateHistory", NodeId, ref, OS, "reject")
+            self.ee.emit("UpdateHistory", NodeId, ref, OS, "failed")
             self.ee.emit("Logger", full_ref + " for OS: " + OS + "finished with error")
             return
 
-        self.ee.emit("UpdateHistory", NodeId, ref, OS, "complete")
+        self.ee.emit("UpdateHistory", NodeId, ref, OS, "done")
         self.ee.emit("Logger", full_ref + " for OS: " + OS + " has been downloaded.")
         return
 

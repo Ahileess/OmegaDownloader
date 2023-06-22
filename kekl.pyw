@@ -8,6 +8,7 @@ import GUI as mgui
 import Manager
 from pymitter import EventEmitter
 from pynput import keyboard
+import odeplr_gui_fonts
 
 toggle:bool = True
 
@@ -67,6 +68,7 @@ def mainfunc():
     dpg.set_primary_window('MainWindow', True)
     dpg.setup_dearpygui()
     dpg.show_viewport()
+    odeplr_gui_fonts.dpg_fonts_init()
     
     
     while dpg.is_dearpygui_running():

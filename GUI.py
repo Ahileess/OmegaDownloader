@@ -3,8 +3,10 @@ import dearpygui.dearpygui as dpg
 from pymitter import EventEmitter
 from Manager import Manager
 
+
 class GUIManager( ):
     def __init__(self, mng: Manager, eventEmit:EventEmitter) -> None:
+        
         self.WindowManager = []
         self.DeleteComponentList = []
         self.DeleteQueueItems = []
@@ -88,7 +90,7 @@ class GUIManager( ):
                         
 
             with dpg.group(horizontal=True):
-                with dpg.child_window(tag="OutputLogger", height=-2, width=-580):
+                with dpg.child_window(tag="OutputLogger", height=-2, width=-650):
                     with dpg.group(horizontal=True):
                         dpg.add_text(default_value="Logger")
                         dpg.add_button(label="Save", callback=self.SaveLog)
@@ -102,6 +104,8 @@ class GUIManager( ):
                     with dpg.group(horizontal=True):
                         dpg.add_text(default_value="History")
                         dpg.add_button(label="Clear", callback=self.ClearHistory)
+                        dpg.add_text(tag="IndiLabel", default_value="Download ", show=False)
+                        dpg.add_loading_indicator(tag="IndiLoad", radius=2, circle_count=10, show=False, color=(255,255,255,255), secondary_color=(43,198,245,255))
 
                     dpg.add_separator()
                     with dpg.child_window(tag="above_history", width=-1):
@@ -139,7 +143,9 @@ class GUIManager( ):
                         dpg.add_checkbox(label="Windows", tag="checkWindowsOut")
                         dpg.add_checkbox(label="Linux", tag="checkLinuxOut")
             with dpg.child_window(tag="ProjectsWindowOut", height=-35):
-                dpg.add_button(label="Add Project", tag="AddProjButton", callback=self.AddNewInputProject)
+                with dpg.group(tag="ProjectsWindowOutGroup", horizontal=True, horizontal_spacing=10):
+                    dpg.add_button(label="Add Project", tag="AddProjButton", callback=self.AddNewInputProject)
+                    dpg.add_button(label="Add Separator", tag="AddSepButton", callback=self.AddNewSeparator)
             with dpg.group(horizontal=True, horizontal_spacing=10):
                 dpg.add_button(label="OK", callback=self.SaveSettings, width=50, height=25)
         
@@ -193,7 +199,11 @@ class GUIManager( ):
 
         listProjs = self.mng.ProjectsList()
         for p in listProjs:
-            dpg.add_button(label=p, parent="LeftPanelGroup", callback=self.LoadVersions, user_data=p)
+            #Запилить фильтр на разделитель и сам разделитель сделать текстом.
+            if ("==" in p):
+                dpg.add_text(default_value=p, color=(43,198,245,255), parent="LeftPanelGroup")
+            else:
+                dpg.add_button(label=p, parent="LeftPanelGroup", callback=self.LoadVersions, user_data=p)
         pass
 
     def LoadVersions(self, sender, app_data, user_data):
@@ -354,12 +364,15 @@ class GUIManager( ):
 
         for p in projs:
             t = []
-            with dpg.group(before="AddProjButton"):
+            with dpg.group(before="ProjectsWindowOutGroup"):
                 t.append(dpg.add_input_text(label="Name", default_value=p["name"]))
                 t.append(dpg.add_input_text(label="Custom Path", default_value=p["folder"]))
                 t.append(dpg.add_checkbox(label="Enable Custom Path", default_value=p["activePath"]))
-                t.append(dpg.add_button(label="X", width=20, height=20, callback=self.DeleteProjectSettings, before=t[0]))
-                t.append(dpg.add_separator(before=t[3]))
+                with dpg.group(before=t[0], horizontal=True):
+                    t.append(dpg.add_button(label="X", width=20, height=20, callback=self.DeleteProjectSettings))
+                    t.append(dpg.add_button(label="^", width=20, height=20, callback=self.UpProjectSettings))
+                    t.append(dpg.add_button(label="v", width=20, height=20, callback=self.DownProjectSettings))
+                t.append(dpg.add_separator())
             self.SettingsID.append(t)
                 
         dpg.configure_item("SettingsWindow", show=True)
@@ -371,7 +384,29 @@ class GUIManager( ):
                 for e in i:
                     dpg.delete_item(e)
                 self.SettingsID.remove(i)
-        
+                return
+        pass
+
+    def UpProjectSettings(self, sender, app_data, user_data):
+        for i in self.SettingsID:
+            if (sender in i):
+                idx = self.SettingsID.index(i)
+                if (idx > 0):
+                    self.SettingsID[idx - 1], self.SettingsID[idx] = self.SettingsID[idx], self.SettingsID[idx-1]
+                    self.SaveSettings("", "", "")
+                    self.OpenSettings("", "", "")   
+                return
+        pass
+
+    def DownProjectSettings(self, sender, app_data, user_data):
+        for i in self.SettingsID:
+            if (sender in i):
+                idx = self.SettingsID.index(i)
+                if (idx < len(self.SettingsID) - 1):
+                    self.SettingsID[idx], self.SettingsID[idx + 1] = self.SettingsID[idx + 1], self.SettingsID[idx]
+                    self.SaveSettings("", "", "")
+                    self.OpenSettings("", "", "")   
+                return
         pass
 
     def Logger(self, text:str):
@@ -380,13 +415,30 @@ class GUIManager( ):
 
     def AddNewInputProject(self, sender, app_data, user_data):
         data =[]
-        with dpg.group(before="AddProjButton"):
+        with dpg.group(before="ProjectsWindowOutGroup"):
             data.append(dpg.add_input_text(label="Name"))
             data.append(dpg.add_input_text(label="Custom Path"))
             data.append(dpg.add_checkbox(label="Enable Custom Path"))
-            data.append(dpg.add_button(label="X", width=20, height=20,  callback=self.DeleteProjectSettings, before=data[0]))
-            data.append(dpg.add_separator(before=data[3]))
-            self.SettingsID.append(data)
+            with dpg.group(before=data[0], horizontal=True):
+                data.append(dpg.add_button(label="X", width=20, height=20, callback=self.DeleteProjectSettings))
+                data.append(dpg.add_button(label="^", width=20, height=20, callback=self.UpProjectSettings))
+                data.append(dpg.add_button(label="v", width=20, height=20, callback=self.DownProjectSettings))
+            data.append(dpg.add_separator())
+        self.SettingsID.append(data)
+        pass
+
+    def AddNewSeparator(self, sender, app_data, user_data):
+        data =[]
+        with dpg.group(before="ProjectsWindowOutGroup"):
+            data.append(dpg.add_input_text(label="Name", default_value="==============Name=============="))
+            data.append(dpg.add_input_text(label="Custom Path"))
+            data.append(dpg.add_checkbox(label="Enable Custom Path", default_value=False))
+            with dpg.group(before=data[0], horizontal=True):
+                data.append(dpg.add_button(label="X", width=20, height=20, callback=self.DeleteProjectSettings))
+                data.append(dpg.add_button(label="^", width=20, height=20, callback=self.UpProjectSettings))
+                data.append(dpg.add_button(label="v", width=20, height=20, callback=self.DownProjectSettings))
+            data.append(dpg.add_separator())
+        self.SettingsID.append(data)
         pass
     
     def SaveSettings(self, sender, app_data, user_data):
@@ -404,7 +456,7 @@ class GUIManager( ):
         self.mng.SaveSettings(d)
 
         for i in dpg.get_item_children("ProjectsWindowOut", 1):
-            if (dpg.get_item_alias(i) != "AddProjButton"):  
+            if (dpg.get_item_alias(i) != "ProjectsWindowOutGroup"):  
                 dpg.delete_item(i)
 
         self.SettingsID = []
@@ -502,9 +554,15 @@ class GUIManager( ):
     def UpdateHistory(self):
         temp: str = ""
         for node in self.mng.history:
-            temp = f"{node['id']}|{node['ref']}|{node['os']}| {node['active']} \n" + temp
+            temp = f"{node['id']}| {node['ref']} |{node['os']}| {node['active']} \n" + temp
 
         dpg.set_value("history_out", temp)
+        if ("loading" in temp) | ("waiting" in temp):
+            dpg.configure_item("IndiLoad", show=True)
+            dpg.configure_item("IndiLabel", show=True)
+        else:
+            dpg.configure_item("IndiLoad", show=False)
+            dpg.configure_item("IndiLabel", show=False)
         pass
 
     def ClearHistory(self):
