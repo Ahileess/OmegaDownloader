@@ -20,6 +20,7 @@ class Manager():
         self.downloadQueue = []
         self.uninstallQueue = []
         self.history = []
+        self.hashVersions = []
         self.NodeIdCount:int = 0
 
         self.userName = self.parser.GetUserName(self.Repo)
@@ -38,13 +39,32 @@ class Manager():
         for p in self.objSetting.projectsList:
             if (p.name == name):
                 self.CurrentProject = p
-                pass
+                
 
         vList = self.parser.GetVersionsList(name, self.Repo)
 
         if (len(vList) <= 0):
             return "Login Error"
+        
+        for node in self.hashVersions:
+            if node['Name'] == name:
+                self.hashVersions.remove(node)
+        self.hashVersions.append({"Name":name, "vlist": vList})
+
         return vList
+
+    def LoadHashversions(self, name:str):
+        for p in self.objSetting.projectsList:
+            if (p.name == name):
+                self.CurrentProject = p
+                
+
+        for node in self.hashVersions:
+            if node['Name'] == name:
+                return node['vlist']
+        
+        return ""
+
 
     def LoadBuilds(self, name: str):
         listB = []
@@ -183,6 +203,10 @@ class Manager():
     
     def SaveInstallToFile(self, compName):
         self.parser.SaveInstallComponentToFile(compName, self.objSetting.downloadFolder)
+        pass
+
+    def CopyInstallToClipboard(self, compName):
+        self.parser.SaveInstallComponentToFile(compName, "")
         pass
 
 
