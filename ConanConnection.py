@@ -3,6 +3,7 @@ import re
 import pathlib
 import shutil
 import threading
+import pyperclip
 from pymitter import EventEmitter
 from windows_tools.installed_software import get_installed_software
 
@@ -258,6 +259,15 @@ class ConanParser:
             for software in get_installed_software():
                 if (software['name'].find("Alpha") != -1):
                     self.installedComponents.append(software)
+                if (software['name'].find("SUER") != -1):
+                    self.installedComponents.append(software)
+                if (software['name'].find("AstraRegul") != -1):
+                    self.installedComponents.append(software)
+                if (software['name'].find("ASOKU") != -1):
+                    self.installedComponents.append(software)
+                if (software['name'].find("SePlatform") != -1):
+                    self.installedComponents.append(software)
+
             self.installedComponents.sort(key=lambda x:(x["name"]))
         except:
             self.ee.emit("Logger", "Some problems with rights! Open soft with admin rights.")
@@ -287,37 +297,55 @@ class ConanParser:
 
     def SaveInstallComponentToFile(self, queue, path):
         try:
+            refers = ""
+            for c in queue:
+                idx = c.find(" ")
+                if (idx == -1):
+                    continue
+                name = c[:idx]
+                if((".Tools" in name) | (".Alarms" in name) | (".Trends" in name ) |
+                ("AlphaPlatform" in name) | (".Licensing.Agent" in name )):
+                    continue
+
+                if (name.find("AccessPoint") != -1):
+                    name = name.replace("AccessPoint", "Server")
+
+                prefix = ""
+
+                if (c.find("WebViewer") != -1):
+                    prefix="-WebViewer"
+
+                if ((".Domain" in name) | (".Security" in name) | ("HMI.Tables" in name) | 
+                ("HMI.Security" in name) | ("HMI.Charts" in name)):
+                    prefix += "-Distr/"
+                else:
+                    prefix += "-Distro/"
+
+                var = re.search(r' [\dt].*', c)[0][1:]
+
+                if "Alpha" in name:
+                    ref = name+prefix+var+r"@automiq/build" + "\n"
+                elif "SUER" in name:
+                    ref = name+prefix+var+r"@suer/build" + "\n"
+                elif "AstraRegul" in name: 
+                    ref = name+prefix+var+r"@reglab/build" + "\n"
+                elif "SePlatform" in name: 
+                    ref = name+prefix+var+r"@seplatform/build" + "\n"
+                elif "ASOKU" in name: 
+                    ref = name+prefix+var+r"@sms-automation/build" + "\n"
+
+                refers += ref
+
+            if (path == ""):
+                pyperclip.copy(refers)
+                self.ee.emit("Logger", "Success! Copy to Clipboard.")
+                return
             with open(path + r'\InstalledComponent.txt', 'w') as f:
-                for c in queue:
-                    idx = c.find(" ")
-                    if (idx == -1):
-                        continue
-                    name = c[:idx]
-                    if((name == "Alpha.Tools") | (name == "Alpha.Alarms") | (name == "Alpha.Trends") |
-                    (name == "AlphaPlatform") | (name == "Alpha.Licensing.Agent")):
-                        continue
-
-                    if (name.find("AccessPoint") != -1):
-                        name = name.replace("AccessPoint", "Server")
-
-                    prefix = ""
-
-                    if (c.find("WebViewer") != -1):
-                        prefix="-WebViewer"
-
-                    if ((name == "Alpha.Domain") | (name == "Alpha.Security") | (name == "Alpha.HMI.Tables") | 
-                    (name == "Alpha.HMI.Security") | (name == "Alpha.HMI.Charts")):
-                        prefix += "-Distr/"
-                    else:
-                        prefix += "-Distro/"
-
-                    var = re.search(r' [\dt].*', c)[0][1:]
-                    ref = name+prefix+var+r"@automiq/build"
-                    f.write(f"{ref}\n")
+                f.write(f"{refers}")
             self.ee.emit("Logger", "Success! File saved to " + path + r'\InstalledComponent.txt')
         except:
             self.ee.emit("Logger", "Error! File didn't save.")
-        pass
+        
 
     def OpenExplorer(self, path):
         try:
@@ -336,11 +364,16 @@ class ConanParser:
         pass
 
     def LoadQueueFromFile(self, filePath):
-        with open(filePath, 'r') as f:
-            refs = f.readlines()
-            refs = [ref.rstrip() for ref in refs]
-        self.ee.emit("Logger", "Load queue from file: " + filePath)
-        return refs
+        if (os.path.isfile(filePath)):
+            try:
+                with open(filePath, 'r') as f:
+                    refs = f.readlines()
+                    refs = [ref.rstrip() for ref in refs]
+                self.ee.emit("Logger", "Load queue from file: " + filePath)
+                return refs
+            except:
+                self.ee.emit("Logger", "Failed! Invalid file: " + filePath)
+        return []
 
     def SaveLogToFile(self, log, path):
         with open(path + r'\Log.txt', 'w') as f:
