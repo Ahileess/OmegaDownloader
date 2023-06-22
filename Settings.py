@@ -1,4 +1,5 @@
 from os import write
+import os
 import dearpygui.dearpygui as dpg
 import ProjectClass as projClass
 import json
@@ -15,21 +16,32 @@ class Settings():
         self.downloadFolder = ""
         self.Repository = ""
         self.OSes = None
-        self.dailyFolder = True
+        self.dailyFolder = False
+        self.projectsList = []
 
         pass
 
     def loadSettings(self):
-        self.projectsList = []
-        with open("Settings.json") as json_data:
-            data = json.load(json_data)
-            self.Repository = data["Repository"]
-            self.downloadFolder = data["Path"]
-            self.dailyFolder = data["Daily"]
-            self.OSes = data["OS"]
-            for p in data["Projects"]:
-                proj = projClass.ProjectClass(p["name"], p["folder"], p["activePath"])
-                self.projectsList.append(proj)
+        if (os.path.isfile("Settings.json")):
+            self.projectsList = []
+            with open("Settings.json") as json_data:
+                data = json.load(json_data)
+                self.Repository = data["Repository"]
+                self.downloadFolder = data["Path"]
+                if "Daily" in data:
+                    self.dailyFolder = data["Daily"]
+                self.OSes = data["OS"]
+                for p in data["Projects"]:
+                    proj = projClass.ProjectClass(p["name"], p["folder"], p["activePath"])
+                    self.projectsList.append(proj)
+        else:
+            d = {}
+            d["Repository"] = "Automiq"
+            d["Path"] = "C:\\"
+            d["Daily"] = False
+            d["OS"] = {"Windows": True, "Linux": False}
+            d["Projects"] = []
+            self.SaveSettings(d)
         pass
 
     def SaveSettings(self, data):
@@ -38,7 +50,7 @@ class Settings():
             projs.append(p.CreateJson())
         
         jsonstr = json.dumps(data)
-        with open("Settings.json", mode="w") as json_data:
+        with open("Settings.json", mode="w+") as json_data:
             json_data.write(jsonstr)
 
         #вызвать перезагрузку настроек
