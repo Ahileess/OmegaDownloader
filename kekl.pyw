@@ -8,6 +8,7 @@ import GUI as mgui
 import Manager
 from pymitter import EventEmitter
 from pynput import keyboard
+import odeplr_gui_fonts
 
 toggle:bool = True
 
@@ -53,7 +54,7 @@ def mainfunc():
 
     dpg.create_context()
     #dpg.configure_app(manual_callback_management=True)
-    dpg.create_viewport(title='Omega.Downloader', width=Def_w, height=Def_h, small_icon="test.ico", large_icon="test.ico")
+    dpg.create_viewport(title='Omega.Downloader v.2', width=Def_w, height=Def_h, small_icon="test.ico", large_icon="test.ico")
     #dpgDemo.show_demo()
     #dpg.show_item_registry()
 
@@ -67,6 +68,7 @@ def mainfunc():
     dpg.set_primary_window('MainWindow', True)
     dpg.setup_dearpygui()
     dpg.show_viewport()
+    odeplr_gui_fonts.dpg_fonts_init()
     
     
     while dpg.is_dearpygui_running():

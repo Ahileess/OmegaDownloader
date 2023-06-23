@@ -1,5 +1,6 @@
 '''Прослойка между GUI и бекэндом для подготовки отображаемых данных и обработки передаваемых команд. '''
 import Settings
+from datetime import datetime
 import ProjectClass as pclass
 import ConanConnection as CC
 from pymitter import EventEmitter
@@ -18,11 +19,15 @@ class Manager():
         self.CurrentProject = None
         self.downloadQueue = []
         self.uninstallQueue = []
+        self.history = []
+        self.hashVersions = []
+        self.NodeIdCount:int = 0
 
         self.userName = self.parser.GetUserName(self.Repo)
 
         self.ee.on("Logger", self.Logger)
         self.ee.on("ThreadEnd", self.ClearUninstallQueue)
+        self.ee.on("UpdateHistory", self.HistoryList)
 
     def ProjectsList(self):
         lp = []
@@ -34,13 +39,32 @@ class Manager():
         for p in self.objSetting.projectsList:
             if (p.name == name):
                 self.CurrentProject = p
-                pass
+                
 
         vList = self.parser.GetVersionsList(name, self.Repo)
 
         if (len(vList) <= 0):
             return "Login Error"
+        
+        for node in self.hashVersions:
+            if node['Name'] == name:
+                self.hashVersions.remove(node)
+        self.hashVersions.append({"Name":name, "vlist": vList})
+
         return vList
+
+    def LoadHashversions(self, name:str):
+        for p in self.objSetting.projectsList:
+            if (p.name == name):
+                self.CurrentProject = p
+                
+
+        for node in self.hashVersions:
+            if node['Name'] == name:
+                return node['vlist']
+        
+        return ""
+
 
     def LoadBuilds(self, name: str):
         listB = []
@@ -53,12 +77,21 @@ class Manager():
     def LoadDistrs(self):
         """Должны знать куда скачивать, хеш, репозиторий"""
         if (len(self.downloadQueue) <= 0):
-            self.ee.emit("OutputLog", "The queue is emtpy")
+            self.ee.emit("OutputLog", "The queue is emtpy.")
             return
+    
+        self.ee.emit("OutputLog", "The queue started to download.")
+        #Работаем с копией очереди.
+        localQueue = self.downloadQueue.copy()
 
-        self.ee.emit("OutputLog", "The download started")
-        for ref in self.downloadQueue:
+        self.CleareQueue()
+
+        for ref in localQueue:
             folder = self.objSetting.downloadFolder
+            if (self.objSetting.dailyFolder):
+                today = datetime.now()
+                folder += "\\" + today.strftime('%Y_%m_%d')
+
             a_idx = ref.find("/")
             projName = ref[:a_idx]
 
@@ -72,16 +105,18 @@ class Manager():
             if(proj[0]):
                 folder += "\\" + proj[1]
 
-
-
-            #берем инфу о необходимых ОС из настроек
-            if (self.objSetting.GetOSEnable("Windows")): 
-                text = self.parser.DownloadDistrs(ref, "Windows", self.Repo, folder)
-                self.ee.emit("OutputLog", text)
+            osActive = ""
+            if (self.objSetting.GetOSEnable("Windows")):
+                osActive = "Windows"
                 
             if (self.objSetting.GetOSEnable("Linux")):
-                text = self.parser.DownloadDistrs(ref, "Linux", self.Repo, folder)
-                self.ee.emit("OutputLog", text)
+                if (osActive == "Windows"):
+                    osActive = "Both"
+                else:
+                    osActive = "Linux"
+
+            self.parser.DownloadDistrs(ref, osActive, self.Repo, folder, self.NodeIdCount)
+            self.NodeIdCount += 1
                 
         
     def AddItemQueue(self, build, FullRef: bool = False):
@@ -169,6 +204,10 @@ class Manager():
         self.parser.SaveInstallComponentToFile(compName, self.objSetting.downloadFolder)
         pass
 
+    def CopyInstallToClipboard(self, compName):
+        self.parser.SaveInstallComponentToFile(compName, "")
+        pass
+
 
 
     def ClearUninstallQueue(self):
@@ -186,7 +225,7 @@ class Manager():
 
     def SaveComponentToFile(self):
         if(len(self.downloadQueue) <= 0):
-            self.ee.emit("OutpuLog", "Errore! Queue is empty!")
+            self.ee.emit("OutpuLog", "Error! Queue is empty!")
             return
         
         self.parser.SaveQueueToFile(self.downloadQueue, self.objSetting.downloadFolder)
@@ -205,3 +244,19 @@ class Manager():
 
     def OpenConanStorage(self):
         self.parser.OpenExplorer(self.parser.GetConanStorage()[:-1])
+
+    def HistoryList(self, Nodeid:int, ref:str, OS:str, active:str): 
+        for node in self.history:
+            if ((Nodeid == node['id']) & (OS == node['os'])):
+                node['active'] = active
+                self.ee.emit("UpdateHistoryOut")
+                return
+            
+        self.history.append({"id": Nodeid, "ref": ref, "os": OS, "active": active})
+        self.ee.emit("UpdateHistoryOut")
+        pass
+    
+    def ClearHistoryList(self):
+        self.history.clear()
+        self.ee.emit("UpdateHistoryOut")
+        pass

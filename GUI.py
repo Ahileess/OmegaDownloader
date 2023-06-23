@@ -3,14 +3,17 @@ import dearpygui.dearpygui as dpg
 from pymitter import EventEmitter
 from Manager import Manager
 
+
 class GUIManager( ):
     def __init__(self, mng: Manager, eventEmit:EventEmitter) -> None:
+        
         self.WindowManager = []
         self.DeleteComponentList = []
         self.DeleteQueueItems = []
         self.mng = mng
         self.ee = eventEmit
         self.listVersions = ""
+        self.listHashAvailable = []
 
         self.ee.on("ShowItemQueue", self.ShowItemQueue)
         self.ee.on("RefreshQueue", self.RefreshQueue)
@@ -18,6 +21,7 @@ class GUIManager( ):
         self.ee.on("OutputLog", self.Logger)
         self.ee.on("ReloadProjects", self.LoadProjects)
         self.ee.on("RefreshInstall", self.GetInstalledComponents)
+        self.ee.on("UpdateHistoryOut", self.UpdateHistory)
         
         #dpg.configure_app(docking=True, docking_space=False) TODO: Пока не сделают нормальный докинг, выключаем в dpg
         pass
@@ -31,36 +35,37 @@ class GUIManager( ):
                     dpg.add_separator()
                     dpg.add_menu_item(label="Exit")
                 dpg.add_separator()
-                with dpg.menu(label="Options"):
-                    dpg.add_menu_item(label="Save Queue", callback=self.SaveToFile)
-                    dpg.add_separator()
-                    dpg.add_menu_item(label="Load Queue", callback=lambda: dpg.show_item("fileDialog"))
-                    dpg.add_separator()
-                    dpg.add_menu_item(tag="InstCompMenu", label="Installed Components", callback=self.GetInstalledComponents)
-                    dpg.add_separator()
+                with dpg.menu(label="Options"): 
                     with dpg.menu(label="Conan storage"):
                         dpg.add_menu_item(label="Size", callback=self.ConanStorageSize)
                         dpg.add_separator()
                         dpg.add_menu_item(label="Open explorer", callback=self.OpenConanStorage)
                         dpg.add_separator()
                 dpg.add_separator()
+                dpg.add_menu_item(label="Save Queue", callback=self.SaveToFile)
+                dpg.add_separator()
+                dpg.add_menu_item(label="Load Queue", callback=lambda: dpg.show_item("fileDialog"))
+                dpg.add_separator()
+                dpg.add_menu_item(tag="InstCompMenu", label="Installed Components", callback=self.GetInstalledComponents)
+                dpg.add_separator()
+                
                 dpg.add_menu_item(label="Open storage", callback=self.OpenStorage)
                 dpg.add_separator()
                 
 
             with dpg.group(horizontal=True):
-                with dpg.child_window(width=300, height=600):
+                with dpg.child_window(width=450, height=600):
                     with dpg.child_window(height=65):
                         with dpg.group(tag="LoginPanel"):
                             dpg.add_input_text(tag="outputLogin", enabled=False, width=-1)
                             dpg.add_button(tag="loginButton", label="login", callback=lambda: dpg.configure_item("loginWindow", show=True))
 
-                    with dpg.child_window():
+                    with dpg.child_window(horizontal_scrollbar=True):
                         with dpg.group(tag="LeftPanelGroup"):
                             pass
 
 
-                with dpg.child_window(width=300, height=600):
+                with dpg.child_window(width=350, height=600):
                     with dpg.group(tag="MidPanelGroup"):
                         dpg.add_input_text(tag="FilterField", label="Filter", callback=self.FilterVersions, width=-45)
                         with dpg.table(header_row=False, row_background=True,
@@ -86,19 +91,29 @@ class GUIManager( ):
                             dpg.add_button(label="Clear", callback=self.ClearQueue)
                         
 
-            with dpg.group():
-                with dpg.child_window(tag="OutputLogger", height=-2):
+            with dpg.group(horizontal=True):
+                with dpg.child_window(tag="OutputLogger", height=-2, width=500):
                     with dpg.group(horizontal=True):
                         dpg.add_text(default_value="Logger")
                         dpg.add_button(label="Save", callback=self.SaveLog)
                         dpg.add_button(label="Clear", callback=lambda: dpg.set_value("log_out", ""))
-                        dpg.add_text(tag="IndiLabel" ,default_value="Download ", show=False)
-                        dpg.add_loading_indicator(tag="Loggerindi", style=1, radius=2, circle_count=10, show=False, color=(255,255,255,255))
 
                     dpg.add_separator()
                     with dpg.child_window(tag="above_log_out", width=-1):
                         dpg.add_text(tag="log_out", wrap=0, tracked=True, track_offset=1)
                         
+                with dpg.child_window(tag="History", height=-2, width=-1):
+                    with dpg.group(horizontal=True):
+                        dpg.add_text(default_value="History")
+                        dpg.add_button(label="Clear", callback=self.ClearHistory)
+                        dpg.add_text(tag="IndiLabel", default_value="Download ", show=False)
+                        dpg.add_loading_indicator(tag="IndiLoad", radius=2, circle_count=10, show=False, color=(255,255,255,255), secondary_color=(43,198,245,255))
+
+                    dpg.add_separator()
+                    with dpg.child_window(tag="above_history", width=-1):
+                        dpg.add_input_text(tag="history_out", track_offset=1, multiline=True, height=-1, readonly=True)
+
+                    
                     pass
 
         self.RefreshLogin()
@@ -120,15 +135,19 @@ class GUIManager( ):
 
         #Окно настроек
         with dpg.window(tag="SettingsWindow", label="Settings", modal=True, show=False, width=500, height=500, no_close=True):
-            with dpg.child_window(tag="Conan settings", height=130, no_scrollbar=True):
+            with dpg.child_window(tag="Conan settings", height=160, no_scrollbar=True):
                 with dpg.group():
                     dpg.add_input_text(label="Conan repository", tag="RepoOut")
                     dpg.add_input_text(label="Download Folder", tag="PathOut")
+                    dpg.add_checkbox(label="Daily", tag="DailyOut")
+                    dpg.add_separator()
                     with dpg.group():
                         dpg.add_checkbox(label="Windows", tag="checkWindowsOut")
                         dpg.add_checkbox(label="Linux", tag="checkLinuxOut")
             with dpg.child_window(tag="ProjectsWindowOut", height=-35):
-                dpg.add_button(label="Add Project", tag="AddProjButton", callback=self.AddNewInputProject)
+                with dpg.group(tag="ProjectsWindowOutGroup", horizontal=True, horizontal_spacing=10):
+                    dpg.add_button(label="Add Project", tag="AddProjButton", callback=self.AddNewInputProject)
+                    dpg.add_button(label="Add Separator", tag="AddSepButton", callback=self.AddNewSeparator)
             with dpg.group(horizontal=True, horizontal_spacing=10):
                 dpg.add_button(label="OK", callback=self.SaveSettings, width=50, height=25)
         
@@ -145,6 +164,14 @@ class GUIManager( ):
 
 
         #Описание темы для UI
+        with dpg.theme() as self.hash_btn_theme:
+            with dpg.theme_component(dpg.mvButton):
+                dpg.add_theme_color(dpg.mvThemeCol_Button, (32, 164, 71), category=dpg.mvThemeCat_Core)
+
+        with dpg.theme() as self.no_hash_btn_theme:
+            with dpg.theme_component(dpg.mvButton):
+                dpg.add_theme_color(dpg.mvThemeCol_Button, (67, 71, 80), category=dpg.mvThemeCat_Core)
+
         with dpg.theme() as global_theme:
             with dpg.theme_component(dpg.mvAll):
                 dpg.add_theme_color(dpg.mvThemeCol_Button, (67, 71, 80), category=dpg.mvThemeCat_Core)
@@ -180,9 +207,29 @@ class GUIManager( ):
             for b in dpg.get_item_children("LeftPanelGroup", 1):
                 dpg.delete_item(b)
 
+        self.listHashAvailable.clear()
+
         listProjs = self.mng.ProjectsList()
         for p in listProjs:
-            dpg.add_button(label=p, parent="LeftPanelGroup", callback=self.LoadVersions, user_data=p)
+            if ("===" in p):
+                dpg.add_text(default_value=p, color=(43,198,245,255), parent="LeftPanelGroup")
+            elif ("---" in p):
+                dpg.add_text(default_value=p, color=(255,62,67,255), parent="LeftPanelGroup")
+            elif ("___" in p):
+                dpg.add_text(default_value=p, color=(181,230,29,255), parent="LeftPanelGroup")
+            else:
+                with dpg.group(horizontal=True, parent="LeftPanelGroup"):
+                    dpg.add_button(label=p, callback=self.LoadVersions, user_data=p)
+                    idx = dpg.add_button(label="Hash", callback=self.LoadHashVersions, user_data=p)
+                    for n in self.mng.hashVersions:
+                        if n['Name'] == p:
+                            dpg.bind_item_theme(idx, self.hash_btn_theme)
+                            break
+                        else: 
+                            dpg.bind_item_theme(idx, self.no_hash_btn_theme)
+
+                    self.listHashAvailable.append({"Projs": p, "id": idx})
+                    
         pass
 
     def LoadVersions(self, sender, app_data, user_data):
@@ -202,7 +249,6 @@ class GUIManager( ):
             dpg.delete_item(loader)
             dpg.show_item("VersionsTable")
             return
-
             
         for p in self.listVersions:
                 with dpg.table_row(tag=p, parent="VersionsTable"):
@@ -212,7 +258,37 @@ class GUIManager( ):
         dpg.delete_item(loader)
         dpg.show_item("VersionsTable")
         self.Logger("Finish download versions for " + user_data)
+
+        for node in self.listHashAvailable:
+            if node['Projs'] == user_data:
+                dpg.bind_item_theme(node['id'], self.hash_btn_theme)
+
         pass
+    
+    def LoadHashVersions(self, sender, app_data, user_data):
+        self.listVersions = []
+        dpg.set_value("FilterField", "")
+        self.Logger("Loading hash for " + user_data)
+        dpg.hide_item("VersionsTable")
+        self.listVersions = self.mng.LoadHashversions(user_data)
+        rows = dpg.get_item_children("VersionsTable", 1)
+        for row in rows:
+            dpg.delete_item(row)
+
+        if (self.listVersions == ""):
+            dpg.show_item("VersionsTable")
+            self.Logger("Hash is empty for " + user_data)
+            return
+        
+        for p in self.listVersions:
+                with dpg.table_row(tag=p, parent="VersionsTable"):
+                    with dpg.table_cell():
+                        dpg.add_button(label=p, callback=self.LoadBuilds, user_data=p)
+        
+        dpg.show_item("VersionsTable")
+        self.Logger("Finish loading hash for " + user_data)
+
+
 
     def FilterVersions(self):
         if (self.listVersions == "Login Error"):
@@ -274,18 +350,11 @@ class GUIManager( ):
         pass
     
     def LoadDistrs(self, sender, app_data, user_data):
-        dpg.configure_item("Loggerindi", show=True)
-        dpg.configure_item("IndiLabel", show=True)
         for x in self.DeleteQueueItems:
             dpg.delete_item(x)
-        
         self.mng.LoadDistrs()
-        self.ClearQueue(sender, app_data, user_data)
-
-        dpg.configure_item("Loggerindi", show=False)
-        dpg.configure_item("IndiLabel", show=False)
         self.DeleteQueueItems.clear()
-    
+
     def ManualAddItemQueue(self, sender, app_data, user_data):
         ref = dpg.get_value("AddManualItemQueue")
         if(ref.find("/build") == -1):
@@ -337,6 +406,7 @@ class GUIManager( ):
         setDict = self.mng.OpenSettings()
         dpg.set_value("RepoOut", setDict["Repository"])
         dpg.set_value("PathOut", setDict["Path"])
+        dpg.set_value("DailyOut", setDict["Daily"])
 
         OSes = setDict["OS"]
         windows = OSes["Windows"]
@@ -349,12 +419,15 @@ class GUIManager( ):
 
         for p in projs:
             t = []
-            with dpg.group(before="AddProjButton"):
+            with dpg.group(before="ProjectsWindowOutGroup"):
                 t.append(dpg.add_input_text(label="Name", default_value=p["name"]))
                 t.append(dpg.add_input_text(label="Custom Path", default_value=p["folder"]))
                 t.append(dpg.add_checkbox(label="Enable Custom Path", default_value=p["activePath"]))
-                t.append(dpg.add_button(label="X", width=20, height=20, callback=self.DeleteProjectSettings, before=t[0]))
-                t.append(dpg.add_separator(before=t[3]))
+                with dpg.group(before=t[0], horizontal=True):
+                    t.append(dpg.add_button(label="X", width=20, height=20, callback=self.DeleteProjectSettings))
+                    t.append(dpg.add_button(label="^", width=20, height=20, callback=self.UpProjectSettings))
+                    t.append(dpg.add_button(label="v", width=20, height=20, callback=self.DownProjectSettings))
+                t.append(dpg.add_separator())
             self.SettingsID.append(t)
                 
         dpg.configure_item("SettingsWindow", show=True)
@@ -366,23 +439,62 @@ class GUIManager( ):
                 for e in i:
                     dpg.delete_item(e)
                 self.SettingsID.remove(i)
-        
+                return
         pass
+
+    def UpProjectSettings(self, sender, app_data, user_data):
+        for i in self.SettingsID:
+            if (sender in i):
+                idx = self.SettingsID.index(i)
+                if (idx > 0):
+                    self.SettingsID[idx - 1], self.SettingsID[idx] = self.SettingsID[idx], self.SettingsID[idx-1]
+                    self.SaveSettings("", "", "")
+                    self.OpenSettings("", "", "")   
+                return
+        pass
+
+    def DownProjectSettings(self, sender, app_data, user_data):
+        for i in self.SettingsID:
+            if (sender in i):
+                idx = self.SettingsID.index(i)
+                if (idx < len(self.SettingsID) - 1):
+                    self.SettingsID[idx], self.SettingsID[idx + 1] = self.SettingsID[idx + 1], self.SettingsID[idx]
+                    self.SaveSettings("", "", "")
+                    self.OpenSettings("", "", "")   
+                return
+        
 
     def Logger(self, text:str):
         dpg.set_value("log_out", dpg.get_value("log_out") + "\n" + text)
-        pass
+        
 
     def AddNewInputProject(self, sender, app_data, user_data):
         data =[]
-        with dpg.group(before="AddProjButton"):
+        with dpg.group(before="ProjectsWindowOutGroup"):
             data.append(dpg.add_input_text(label="Name"))
             data.append(dpg.add_input_text(label="Custom Path"))
             data.append(dpg.add_checkbox(label="Enable Custom Path"))
-            data.append(dpg.add_button(label="X", width=20, height=20,  callback=self.DeleteProjectSettings, before=data[0]))
-            data.append(dpg.add_separator(before=data[3]))
-            self.SettingsID.append(data)
-        pass
+            with dpg.group(before=data[0], horizontal=True):
+                data.append(dpg.add_button(label="X", width=20, height=20, callback=self.DeleteProjectSettings))
+                data.append(dpg.add_button(label="^", width=20, height=20, callback=self.UpProjectSettings))
+                data.append(dpg.add_button(label="v", width=20, height=20, callback=self.DownProjectSettings))
+            data.append(dpg.add_separator())
+        self.SettingsID.append(data)
+        
+
+    def AddNewSeparator(self, sender, app_data, user_data):
+        data =[]
+        with dpg.group(before="ProjectsWindowOutGroup"):
+            data.append(dpg.add_input_text(label="Name", default_value="==============Name=============="))
+            data.append(dpg.add_input_text(label="Custom Path"))
+            data.append(dpg.add_checkbox(label="Enable Custom Path", default_value=False))
+            with dpg.group(before=data[0], horizontal=True):
+                data.append(dpg.add_button(label="X", width=20, height=20, callback=self.DeleteProjectSettings))
+                data.append(dpg.add_button(label="^", width=20, height=20, callback=self.UpProjectSettings))
+                data.append(dpg.add_button(label="v", width=20, height=20, callback=self.DownProjectSettings))
+            data.append(dpg.add_separator())
+        self.SettingsID.append(data)
+        
     
     def SaveSettings(self, sender, app_data, user_data):
         projs = []
@@ -392,30 +504,31 @@ class GUIManager( ):
         d = {}
         d["Repository"] = dpg.get_value("RepoOut")
         d["Path"] = dpg.get_value("PathOut")
+        d["Daily"] = dpg.get_value("DailyOut")
         d["OS"] = {"Windows": dpg.get_value("checkWindowsOut"), "Linux": dpg.get_value("checkLinuxOut")}
         d["Projects"] = projs
 
         self.mng.SaveSettings(d)
 
         for i in dpg.get_item_children("ProjectsWindowOut", 1):
-            if (dpg.get_item_alias(i) != "AddProjButton"):  
+            if (dpg.get_item_alias(i) != "ProjectsWindowOutGroup"):  
                 dpg.delete_item(i)
 
         self.SettingsID = []
 
         dpg.configure_item("SettingsWindow", show=False)
         
-        pass
+        
 
     def Login(self, sender, app_data, user_data):
         self.mng.UserLogin(dpg.get_value("LoginInput"), dpg.get_value("PasswordInput"))
         dpg.configure_item("loginWindow", show=False)
-        pass
+        
         
 
     def RefreshLogin(self):
         dpg.set_value("outputLogin", self.mng.GetUserName())
-        pass
+        
     
     def GetInstalledComponents(self, sender="", app_data="", user_data=""):
         self.DeleteComponentList.clear()
@@ -434,12 +547,13 @@ class GUIManager( ):
         with dpg.group(horizontal=True, parent="InstalledList"):
             dpg.add_button(label="Delete", callback=self.UninstallComponents)
             dpg.add_button(tag="SaveInstComp", label="Save", callback=self.SaveInstallComponentToFile)
+            dpg.add_button(tag="CopyInstComp", label="Copy", callback=self.SetInstallComponentToClipboard)
 
         dpg.configure_item("InstalledComponent", show=True)
         dpg.configure_item("RefreshUninst", enabled=True)
         dpg.configure_item("InstCompMenu", enabled=True)
         dpg.configure_item("SaveInstComp", enabled=True)
-        pass
+        
 
     def SetUnistallQueue(self, sender, app_data, user_data):
         if (dpg.get_value(sender)):
@@ -467,13 +581,21 @@ class GUIManager( ):
             self.ee.emit("OutputLog", "Uninstall Queue is empty!")
         pass
 
+    def SetInstallComponentToClipboard(self, sender, app_data, user_data):
+        if (len(self.DeleteComponentList) > 0):
+            self.mng.CopyInstallToClipboard(self.DeleteComponentList)
+        else:
+            self.ee.emit("OutputLog", "Uninstall Queue is empty!")
+        
+
+
     def OpenStorage(self):
         self.mng.OpenStorage()
-        pass
+        
 
     def SaveToFile(self):
         self.mng.SaveComponentToFile()
-        pass
+        
 
 
     def LoadFromFile(self, sender, app_data):
@@ -493,6 +615,23 @@ class GUIManager( ):
     def OpenConanStorage(self):
         self.mng.OpenConanStorage()
         
+    def UpdateHistory(self):
+        temp: str = ""
+        for node in self.mng.history:
+            temp = f"{node['id']}| {node['ref']} |{node['os']}| {node['active']} \n" + temp
+
+        dpg.set_value("history_out", temp)
+        if ("loading" in temp) | ("waiting" in temp):
+            dpg.configure_item("IndiLoad", show=True)
+            dpg.configure_item("IndiLabel", show=True)
+        else:
+            dpg.configure_item("IndiLoad", show=False)
+            dpg.configure_item("IndiLabel", show=False)
+        pass
+
+    def ClearHistory(self):
+        self.mng.ClearHistoryList()
+        pass
 
     def Run(self):
         self.MainWindow()
