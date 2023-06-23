@@ -105,7 +105,6 @@ class Manager():
             if(proj[0]):
                 folder += "\\" + proj[1]
 
-            #берем инфу о необходимых ОС из настроек 0-Вин. 1 - Лин, 2 - Вин и Лин
             osActive = ""
             if (self.objSetting.GetOSEnable("Windows")):
                 osActive = "Windows"
