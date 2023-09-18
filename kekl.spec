@@ -19,6 +19,9 @@ a = Analysis(
     cipher=block_cipher,
     noarchive=False,
 )
+
+a.datas += [('consola.ttf', 'consola.ttf', 'DATA')]
+a.datas += [('test.ico', 'test.ico', 'DATA')]
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
 exe = EXE(

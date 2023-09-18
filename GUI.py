@@ -220,7 +220,7 @@ class GUIManager( ):
             else:
                 with dpg.group(horizontal=True, parent="LeftPanelGroup"):
                     dpg.add_button(label=p, callback=self.LoadVersions, user_data=p)
-                    idx = dpg.add_button(label="Hash", callback=self.LoadHashVersions, user_data=p)
+                    idx = dpg.add_button(label="Cache", callback=self.LoadHashVersions, user_data=p)
                     for n in self.mng.hashVersions:
                         if n['Name'] == p:
                             dpg.bind_item_theme(idx, self.hash_btn_theme)
@@ -268,7 +268,7 @@ class GUIManager( ):
     def LoadHashVersions(self, sender, app_data, user_data):
         self.listVersions = []
         dpg.set_value("FilterField", "")
-        self.Logger("Loading hash for " + user_data)
+        self.Logger("Loading cache for " + user_data)
         dpg.hide_item("VersionsTable")
         self.listVersions = self.mng.LoadHashversions(user_data)
         rows = dpg.get_item_children("VersionsTable", 1)
@@ -277,7 +277,7 @@ class GUIManager( ):
 
         if (self.listVersions == ""):
             dpg.show_item("VersionsTable")
-            self.Logger("Hash is empty for " + user_data)
+            self.Logger("Cache is empty for " + user_data)
             return
         
         for p in self.listVersions:
@@ -286,7 +286,7 @@ class GUIManager( ):
                         dpg.add_button(label=p, callback=self.LoadBuilds, user_data=p)
         
         dpg.show_item("VersionsTable")
-        self.Logger("Finish loading hash for " + user_data)
+        self.Logger("Finish loading cache for " + user_data)
 
 
 

@@ -1,5 +1,4 @@
 
-from json import tool
 import threading
 from time import sleep
 import dearpygui.dearpygui as dpg
@@ -9,6 +8,8 @@ import Manager
 from pymitter import EventEmitter
 from pynput import keyboard
 import odeplr_gui_fonts
+import sys
+import os
 
 toggle:bool = True
 
@@ -44,6 +45,13 @@ def listen():
     with keyboard.GlobalHotKeys({('<ctrl>+<alt>+d'): on_press}) as listener:
         listener.join()
 
+def resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
 def mainfunc():
     global Def_w
     global Def_h
@@ -54,7 +62,7 @@ def mainfunc():
 
     dpg.create_context()
     #dpg.configure_app(manual_callback_management=True)
-    dpg.create_viewport(title='Omega.Downloader v.2', width=Def_w, height=Def_h, small_icon="test.ico", large_icon="test.ico")
+    dpg.create_viewport(title='Omega.Downloader v.2', width=Def_w, height=Def_h, small_icon=resource_path("test.ico"), large_icon=resource_path("test.ico"))
     #dpgDemo.show_demo()
     #dpg.show_item_registry()
 
