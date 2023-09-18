@@ -56,15 +56,19 @@ class ConanParser:
 
     def GetHash(self, ref:str, OS="Windows"):
         hash = ""
-        if(ref.find("DevStudio") != -1):
-            return "b71407595d7f34acb3447ec985d93306edf56b75"
+        nameRef = ref.split('/')[0]
+        print("Name: ", nameRef)
         stream = os.popen("conan info " + ref + " -s os=" + OS)
         print("HASH:")
         for p in stream:
+            print(p)
             if (p[:10].rfind("ID: ") != -1):
-                print(p)
                 hash = p[8:]
                 pass
+            
+            if (p[:20].find("Provides") != -1 and hash != ""):
+                if (p.find(nameRef) != -1):
+                    break
 
         stream.close()
         return hash[:-1]
