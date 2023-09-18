@@ -29,7 +29,7 @@ class ConanParser:
                 if (ref.find("trei") == -1):
                     self.path.append(ref[:-1])
 
-                version = re.search(r'/\d[\w.+-]*[+.]b\d', ref)
+                version = re.search(r'/[\dt][\w.+-]*[+.]b\d', ref)
                 if (version):
                     listVer.append(version.group()[1:-3])
 
