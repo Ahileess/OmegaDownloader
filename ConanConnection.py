@@ -107,12 +107,12 @@ class ConanParser:
         self.ee.emit("Logger", "Find distr for OS:" + OS)
         if (OS not in self.CheckOSDistr(full_ref, rep)):
             self.ee.emit("Logger", full_ref + " not find distr for OS: " + OS + " in repositories")
-            self.ee.emit("UpdateHistory", NodeId, ref, OS, "failed")
+            self.ee.emit("UpdateHistory", NodeId, full_ref, OS, "failed")
             return
         try:
             self.ee.emit("Logger", "Try to get a hash and actual repository.")
             hashAndRep = self.GetHash(full_ref, OS) 
-            self.ee.emit("Logger", "Successfully received the hash and repository")
+            self.ee.emit("Logger", "Successfully received the hash and repository for " + full_ref)
             hash = hashAndRep[0]
             if (hash != ""):
                 hash = ":" + hash
@@ -120,8 +120,9 @@ class ConanParser:
             self.ee.emit("UpdateHistory", NodeId, ref, OS, "loading")
             stream = os.popen("conan download " + full_ref + hash + " -r " + hashAndRep[1])
             for i in stream:
-                if (i.find("Downloading") == -1 or i.find("Downloaded" == -1)):
+                if not ("Downloaded" in i or "Downloading" in i):
                     self.ee.emit("Logger", i)
+                    
 
                 if ("ERROR: Binary package not found:" in i):
                     self.ee.emit("Logger", "Binary package not found!")
