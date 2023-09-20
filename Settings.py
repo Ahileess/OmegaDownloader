@@ -36,7 +36,7 @@ class Settings():
                     self.projectsList.append(proj)
         else:
             d = {}
-            d["Repository"] = "Automiq"
+            d["Repository"] = "Automiq;Automiq2"
             d["Path"] = "C:\\"
             d["Daily"] = False
             d["OS"] = {"Windows": True, "Linux": False}
