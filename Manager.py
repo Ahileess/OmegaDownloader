@@ -15,7 +15,7 @@ class Manager():
         self.objSetting.loadSettings()
         self.objSetting.conanStorage = self.parser.GetConanStorage()
 
-        self.Repo = self.objSetting.Repository
+        self.Repo = self.objSetting.Repository.split(';')
         self.CurrentProject = None
         self.downloadQueue = []
         self.uninstallQueue = []
@@ -174,6 +174,7 @@ class Manager():
 
     def SaveSettings(self, data):
         self.objSetting.SaveSettings(data)
+        self.Repo = self.objSetting.Repository.split(';')
 
 
         self.ee.emit("ReloadProjects", True)

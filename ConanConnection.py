@@ -17,29 +17,32 @@ class ConanParser:
         pass
 
     
-    def GetVersionsList(self, projectName, rep: str):
+    def GetVersionsList(self, projectName, reps):
         try:
-            stream = os.popen("conan search *" + projectName + "* -r " + rep)
             listVer =[]
-            for ref in stream:
-                if(ref.find("Please log") != -1):
-                    self.ee.emit("Logger", ref)
-                    return []
+            for rep in reps:
+                stream = os.popen("conan search *" + projectName + "* -r " + rep)
+                
+                for ref in stream:
+                    if(ref.find("Please log") != -1):
+                        self.ee.emit("Logger", ref)
+                        return []
 
-                if (ref.find("trei") == -1):
-                    self.path.append(ref[:-1])
+                    if (ref.find("trei") == -1):
+                        self.path.append(ref[:-1])
 
-                version = re.search(r'/\d[\w.+-]*[+.]b\d', ref)
-                if (version):
-                    listVer.append(version.group()[1:-3])
+                    version = re.search(r'/[\dt][\w.+-]*[+.]b\d', ref)
+                    if (version):
+                        listVer.append(version.group()[1:-3])
+                stream.close()
 
-            self.path = list(set(self.path))    
+            self.path = list(set(self.path)) 
             result = set(listVer)
-            stream.close()
         except: 
-            self.ee.emit("Logger", "Check your conan in cmd: " + "\'conan search *" + projectName + "* -r " + rep + "\'")
+            self.ee.emit("Logger", "Check your conan in cmd: conan search")
             return[]
-
+        
+        
         return sorted(list(result))
 
     #Ситуация говна, подгрузка другого бренда заставляет передавать сюда имя проекта, и получать список с этим именем,
@@ -56,18 +59,26 @@ class ConanParser:
 
     def GetHash(self, ref:str, OS="Windows"):
         hash = ""
-        if(ref.find("DevStudio") != -1):
-            return "b71407595d7f34acb3447ec985d93306edf56b75"
+        nameRef = ref.split('/')[0]
+        print("Name: ", nameRef)
         stream = os.popen("conan info " + ref + " -s os=" + OS)
         print("HASH:")
         for p in stream:
+            print(p)
             if (p[:10].rfind("ID: ") != -1):
-                print(p)
                 hash = p[8:]
                 pass
 
+            if (p[:20].find("Remote:") != -1):
+                rep = p.split('=')[0].split(':')[1][1:]
+                print(rep)
+            
+            if (p[:20].find("Provides") != -1 and hash != ""):
+                if (p.find(nameRef) != -1):
+                    break
+
         stream.close()
-        return hash[:-1]
+        return [hash[:-1], rep]
         
 
     def DownloadDistrs(self, ref, OS, rep, target_path, NodeId):
@@ -93,20 +104,26 @@ class ConanParser:
         self.ee.emit("UpdateHistory", NodeId, ref, OS, "waiting")
         target_path = pathlib.Path(target_path)
         full_ref = ref
-        
+        self.ee.emit("Logger", "Find distr for OS:" + OS)
         if (OS not in self.CheckOSDistr(full_ref, rep)):
-            self.ee.emit("Logger", full_ref + " not find distr for OS: " + OS + " in repo: " + rep)
-            self.ee.emit("UpdateHistory", NodeId, ref, OS, "failed")
+            self.ee.emit("Logger", full_ref + " not find distr for OS: " + OS + " in repositories")
+            self.ee.emit("UpdateHistory", NodeId, full_ref, OS, "failed")
             return
         try:
-            hash = self.GetHash(full_ref, OS)
+            self.ee.emit("Logger", "Try to get a hash and actual repository.")
+            hashAndRep = self.GetHash(full_ref, OS) 
+            self.ee.emit("Logger", "Successfully received the hash and repository for " + full_ref)
+            hash = hashAndRep[0]
             if (hash != ""):
                 hash = ":" + hash
-            self.ee.emit("Logger", "conan download " + full_ref + hash + " -r " + rep)
+            self.ee.emit("Logger", "conan download " + full_ref + hash + " -r " + hashAndRep[1])
             self.ee.emit("UpdateHistory", NodeId, ref, OS, "loading")
-            stream = os.popen("conan download " + full_ref + hash + " -r " + rep)
+            stream = os.popen("conan download " + full_ref + hash + " -r " + hashAndRep[1])
             for i in stream:
-                self.ee.emit("Logger", i) #Провести валидацию на сообщение "ERROR: Binary package not found:"
+                if not ("Downloaded" in i or "Downloading" in i):
+                    self.ee.emit("Logger", i)
+                    
+
                 if ("ERROR: Binary package not found:" in i):
                     self.ee.emit("Logger", "Binary package not found!")
                     self.ee.emit("UpdateHistory", NodeId, ref, OS, "failed")
@@ -173,6 +190,7 @@ class ConanParser:
         return
 
     def GetFullDistrPath(self, ref:str, hash:str ):
+        self.ee.emit("Logger", "Starting moving files.")
         print("Ref: " + ref + " Hash: " + hash)
         try:
             cachDir = pathlib.Path(self.GetConanStorage()[:-1])
@@ -207,30 +225,30 @@ class ConanParser:
 
         return p
 
-    def CheckOSDistr(self, ref:str, repo:str):
+    def CheckOSDistr(self, ref:str, reps):
         OSList = set()
         try:
-            stream = os.popen("conan search " + ref + " -r " + repo)
-            for s in stream:
-                if(s.find("Windows") != -1):
-                    OSList.add("Windows")
-                elif (s.find("Linux") != -1):
-                    OSList.add("Linux")
-                
-            stream.close()
-
+            for repo in reps:
+                stream = os.popen("conan search " + ref + " -r " + repo)
+                for s in stream:
+                    if(s.find("Windows") != -1):
+                        OSList.add("Windows")
+                    elif (s.find("Linux") != -1):
+                        OSList.add("Linux")
+                    
+                stream.close()
         except:
             self.ee.emit("Logger", "Didn't work \'conan search " + ref + " -r " + repo + "\'")
             return set()
 
         return OSList
 
-    def GetUserName(self, repo: str):
+    def GetUserName(self, repo):
         user = ""
         try:
             stream = os.popen("conan user")
             for s in stream:
-                if (s.find(repo) & s.find("Authenticated")):
+                if (s.find(repo[0]) & s.find("Authenticated")):
                     user = re.search(r': \'\w*\'', s)[0][3:-1]
 
             stream.close()
@@ -239,16 +257,16 @@ class ConanParser:
 
         return user
 
-    def login(self, login:str, password: str, repo:str):
+    def login(self, login:str, password: str, reps:str):
         try:
-            if (password == ""):
-                stream = os.popen("conan user " + login + " -r " + repo)
-            else:
-                stream = os.popen("conan user " + login + " -p " + password + " -r " + repo)
-            for i in stream:
-                self.ee.emit("Logger", i)
-
-            stream.close()
+            for repo in reps:
+                if (password == ""):
+                    stream = os.popen("conan user " + login + " -r " + repo)
+                else:
+                    stream = os.popen("conan user " + login + " -p " + password + " -r " + repo)
+                for i in stream:
+                    self.ee.emit("Logger", i)
+                stream.close()
         except:
             self.ee.emit("Logger", "Some problems with \"conan user login\". Check it in cmd!")
         pass
