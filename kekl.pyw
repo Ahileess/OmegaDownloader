@@ -62,7 +62,7 @@ def mainfunc():
 
     dpg.create_context()
     #dpg.configure_app(manual_callback_management=True)
-    dpg.create_viewport(title='Omega.Downloader v.2', width=Def_w, height=Def_h, small_icon=resource_path("test.ico"), large_icon=resource_path("test.ico"))
+    dpg.create_viewport(title='Omega.Downloader v2.5', width=Def_w, height=Def_h, small_icon=resource_path("test.ico"), large_icon=resource_path("test.ico"))
     #dpgDemo.show_demo()
     #dpg.show_item_registry()
 
