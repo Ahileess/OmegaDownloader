@@ -132,7 +132,7 @@ class ConanParser:
             stream.close()
 
             self.ee.emit("Logger", "Download finished: " + full_ref + " for OS: " + OS)
-
+            print("1233")
             pathCach = self.GetFullDistrPath(full_ref, hash)
             if (pathCach == ""):
                 self.ee.emit("Logger", "Distr path wasn't find. Check your conan.")
@@ -140,28 +140,40 @@ class ConanParser:
                 return 
             
             target_path.parent.mkdir(parents=True, exist_ok=True)
-
-            print(pathCach / 'distr//msi')
-
-            if ((pathCach / 'distr//msi').exists()):
-                print("pathCach")
+            
+            if ((pathCach / 'distr//msi').exists() and OS == "Windows"):
                 shutil.copytree(pathCach/'distr//msi', target_path/'msi', dirs_exist_ok=True)
-            elif ((pathCach / 'msi').exists()):
+            elif ((pathCach / 'msi').exists() and OS == "Windows"):
                 shutil.copytree(pathCach/'msi', target_path/'msi', dirs_exist_ok=True)
+            elif ((pathCach / 'distr//ru-RU').exists() and OS == "Windows"):
+                print("pathCach")
+                shutil.copytree(pathCach/'distr//ru-RU', target_path/'msi', dirs_exist_ok=True)
+            elif ((pathCach / 'distr').exists() and OS == "Windows"):
+                shutil.copytree(pathCach/'distr', target_path/'msi', dirs_exist_ok=True)
             elif (OS == "Windows"):
                 raise FileNotFoundError('kekl')
 
-            if ((pathCach / 'distr//deb').exists()):
+            if ((pathCach / 'distr//deb').exists() and OS == "Linux"):
                 shutil.copytree(pathCach/'distr//deb', target_path/'deb', dirs_exist_ok=True)
-            elif ((pathCach / 'deb').exists()):
+            elif ((pathCach / 'deb').exists() and OS == "Linux"):
                 shutil.copytree(pathCach/'deb', target_path/'deb', dirs_exist_ok=True)
+            elif ((pathCach / 'distr').exists() and OS == "Linux"):
+                print("pathCach")
+                shutil.copytree(pathCach/'distr', target_path/'deb', dirs_exist_ok=True)
+            elif ((pathCach / 'distr//ru-RU').exists() and OS == "Linux"):
+                shutil.copytree(pathCach/'distr//ru-RU', target_path/'deb', dirs_exist_ok=True)
             elif (OS == "Linux"):
                 raise FileNotFoundError('kekl')
 
-            if ((pathCach / 'distr//rpm').exists()):
+            if ((pathCach / 'distr//rpm').exists() and OS == "Linux"):
                 shutil.copytree(pathCach/'distr//rpm', target_path/'rpm', dirs_exist_ok=True)
-            elif ((pathCach / 'rpm').exists()):
+            elif ((pathCach / 'rpm').exists() and OS == "Linux"):
                 shutil.copytree(pathCach/'rpm', target_path/'rpm', dirs_exist_ok=True)
+            elif ((pathCach / 'distr').exists() and OS == "Linux"):
+                print("pathCach")
+                shutil.copytree(pathCach/'distr', target_path/'rpm', dirs_exist_ok=True)
+            elif ((pathCach / 'distr//ru-RU').exists() and OS == "Linux"):
+                shutil.copytree(pathCach/'distr//ru-RU', target_path/'rpm', dirs_exist_ok=True)
             
 
         except PermissionError:
@@ -200,15 +212,14 @@ class ConanParser:
             cachDir /= 'package'
             cachDir /= hash[1:]
 
-            print ("cache: ")
-            print(cachDir)
-
             conan_link = cachDir / ".conan_link"
             if conan_link.exists():
                 cachDir = pathlib.Path(conan_link.read_text(encoding="utf-8"))
+
         except:
             self.ee.emit("Logger", "The path to distr is invalid. Reference: " + ref + ":" + hash)
-            return ""
+            return ""      
+
         return cachDir
 
     def GetConanStorage(self):
