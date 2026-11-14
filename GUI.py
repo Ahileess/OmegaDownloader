@@ -74,13 +74,18 @@ class GUIManager( ):
 
                 with dpg.child_window(width=350, height=600):
                     with dpg.group(tag="MidPanelGroup"):
-                        dpg.add_input_text(tag="FilterField", label="Filter", callback=self.FilterVersions, width=-45)
-                        with dpg.table(header_row=False, row_background=True,
-                            borders_innerH=True, borders_outerH=False, borders_innerV=True,
-                            borders_outerV=False, tag="VersionsTable"):
-                            
-                            dpg.add_table_column(label="Versions")
-                            pass       
+                        # Фильтр теперь в отдельной группе сверху с фиксированной высотой
+                        with dpg.child_window(height=40):
+                            dpg.add_input_text(tag="FilterField", label="Filter", callback=self.FilterVersions, width=-45)
+                        
+                        # Таблица версий теперь в child_window, который занимает всё оставшееся место
+                        with dpg.child_window(height=-1):
+                            with dpg.table(header_row=False, row_background=True,
+                                borders_innerH=True, borders_outerH=False, borders_innerV=True,
+                                borders_outerV=False, tag="VersionsTable"):
+                                
+                                dpg.add_table_column(label="Versions")
+                                pass       
 
 
                 with dpg.child_window(width=-1, height=600):
@@ -263,7 +268,7 @@ class GUIManager( ):
         try:
             if task_type == "version":
                 self.listVersions = []
-                dpg.set_value("FilterField", "")
+                # dpg.set_value("FilterField", "") # Удалено, так как виджет удален
                 loader = dpg.add_loading_indicator(before="VersionsTable", circle_count=10, secondary_color=(43,198,245,255), color=(250,250,255,255))
                 self.Logger("Load versions for " + product_name)
                 dpg.hide_item("VersionsTable")
@@ -294,7 +299,7 @@ class GUIManager( ):
 
             else: # hash type
                 self.listVersions = []
-                dpg.set_value("FilterField", "")
+                # dpg.set_value("FilterField", "") # Удалено, так как виджет удален
                 self.Logger("Loading cache for " + product_name)
                 dpg.hide_item("VersionsTable")
                 self.listVersions = self.mng.LoadHashversions(product_name)
@@ -356,34 +361,40 @@ class GUIManager( ):
         table_uuid = dpg.generate_uuid()
         brand_group_tag = dpg.generate_uuid() # Generate unique tag first!
         buttonsBuild = []
+        for p in BuildingsList:
+            rowuuid = dpg.generate_uuid()
+            buttonsBuild.append({"Uid": rowuuid, "Label": p})
+
         mousepos = dpg.get_mouse_pos()
         mousepos[0] += 200
-        with dpg.window(label=f"{self.mng.CurrentProductName} - {user_data}", tag=f"Win_{user_data}_{brand_group_tag}", pos=mousepos, height=550, width=200):
+        with dpg.window(label=f"{self.mng.CurrentProductName} - {user_data}", tag=f"Win_{user_data}_{brand_group_tag}", pos=mousepos, height=550, width=250):
             
-            with dpg.group(horizontal=True):
-                with dpg.child_window(width=-1, height=300):
-                    with dpg.table(tag = table_uuid, header_row=False, row_background=True,
-                                   borders_innerH=True, borders_outerH=True, borders_innerV=True,
-                                   borders_outerV=True):
-                        dpg.add_table_column()
+            # Фильтр сверху с фиксированной высотой
+            with dpg.child_window(height=40):
+                dpg.add_input_text(label="Filter Builds", callback=self.FilterBuilds, width=-45, user_data=buttonsBuild)
 
-                        for p in BuildingsList:
-                            rowuuid = dpg.generate_uuid()
-                            buttonsBuild.append({"Uid": rowuuid, "Label": p})
-                            with dpg.table_row(tag=rowuuid):
-                                with dpg.table_cell():
-                                    # Pass the brand_group_tag as a 3rd element in user_data
-                                    dpg.add_button(label=p, callback=self.ShowBrandSelection, user_data=[p, user_data, brand_group_tag])
+            # Таблица в child_window, занимающая всё свободное место
+            with dpg.child_window(height=-1):
+                with dpg.table(tag = table_uuid, header_row=False, row_background=True,
+                               borders_innerH=True, borders_outerH=True, borders_innerV=True,
+                               borders_outerV=True):
+                    dpg.add_table_column()
+
+                    for i, p in enumerate(BuildingsList):
+                        item = buttonsBuild[i]
+                        with dpg.table_row(tag=item["Uid"]):
+                            with dpg.table_cell():
+                                # Pass the brand_group_tag as a 3rd element in user_data
+                                dpg.add_button(label=p, callback=self.ShowBrandSelection, user_data=[p, user_data, brand_group_tag])
                 
-                    dpg.add_input_text(before=table_uuid, callback=self.FilterBuilds, user_data=buttonsBuild, width=-5)
-
-                with dpg.child_window(width=-1, height=300): # Changed from -1 to 300 to ensure space for checkboxes
-                    dpg.add_text("Brand Selection:")
-                    with dpg.group(horizontal=True, tag=brand_group_tag):
-                        # Placeholder for checkboxes
-                        pass
-                    # Pass the brand_group_tag to this button as well
-                    dpg.add_button(label="Add Selected Brands", callback=self.AddSelectedBrandsToQueue, user_data=brand_group_tag)
+            # Блок выбора брендов снизу
+            with dpg.child_window(height=-1):
+                dpg.add_text("Brand Selection:")
+                with dpg.group(horizontal=True, tag=brand_group_tag):
+                    # Placeholder for checkboxes
+                    pass
+                # Pass the brand_group_tag to this button as well
+                dpg.add_button(label="Add Selected Brands", callback=self.AddSelectedBrandsToQueue, user_data=brand_group_tag)
 
         pass
 
@@ -401,35 +412,35 @@ class GUIManager( ):
         mousepos = dpg.get_mouse_pos()
         mousepos[0] += 200
         
-        with dpg.window(label=f"Brands for {build_ref}", tag=window_tag, pos=mousepos, height=550, width=200):
-            with dpg.group(horizontal=True):
-                with dpg.child_window(width=-1, height=300):
-                    table_uuid = dpg.generate_uuid()
-                    buttons_brands = []
-                    with dpg.table(tag=table_uuid, header_row=False, row_background=True,
-                                   borders_innerH=True, borders_outerH=True, borders_innerV=True,
-                                   borders_outerV=True):
-                        dpg.add_table_column()
+        with dpg.window(label=f"Brands for {build_ref}", tag=window_tag, pos=mousepos, height=350, width=200):
+            # Таблица занимает всё свободное место окна (фильтр удален)
+            with dpg.child_window(height=-1):
+                table_uuid = dpg.generate_uuid()
+                buttons_brands = []
+                with dpg.table(tag=table_uuid, header_row=False, row_background=True,
+                               borders_innerH=True, borders_outerH=True, borders_innerV=True,
+                               borders_outerV=True):
+                    dpg.add_table_column()
 
-                        for brand in brands:
-                            rowuuid = dpg.generate_uuid()
-                            buttons_brands.append({"Uid": rowuuid, "Label": brand})
-                            with dpg.table_row(tag=rowuuid):
-                                with dpg.table_cell():
-                                    dpg.add_button(label=brand, 
-                                                    callback=lambda s, a, b=brand: self.AddBrandToQueue(b, build_ref, version, window_tag),
-                                                    user_data=brand)
+                    for brand in brands:
+                        rowuuid = dpg.generate_uuid()
+                        buttons_brands.append({"Uid": rowuuid, "Label": brand})
+                        with dpg.table_row(tag=rowuuid):
+                            with dpg.table_cell():
+                                dpg.add_button(label=brand, 
+                                                callback=lambda s, a, b=brand: self.AddBrandToQueue(b, build_ref, version, window_tag),
+                                                user_data=brand)
                 
-                    dpg.add_input_text(before=table_uuid, callback=self.FilterBrands, user_data=buttons_brands, width=-5)
-
-                with dpg.child_window(width=-1, height=-1):
-                    dpg.add_text("Click a brand to add it to the queue.")
+            with dpg.child_window(height=-1):
+                dpg.add_text("Click a brand to add it to the queue.")
 
     def AddBrandToQueue(self, brand, build_ref, version, window_tag):
         self.mng.AddItemQueue(build_ref, version, [brand])
         # dpg.configure_item(window_tag, show=False) # Removed to allow multiple selections
 
     def FilterBrands(self, sender, app_data, user_data):
+        if user_data is None:
+            return
         filter = dpg.get_value(sender)
 
         if (filter == ""):
@@ -734,6 +745,8 @@ class GUIManager( ):
         pass
 
     def FilterBuilds(self, sender, app_data, user_data):
+        if user_data is None:
+            return
         filter = dpg.get_value(sender)
 
         if (filter == ""):
