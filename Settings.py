@@ -55,19 +55,18 @@ class Settings():
 
     def checkActivePath(self, projName):
         projName = projName.strip()
-        # 1. Попытка точного совпадения (для ссылок без префикса бренда)
+        best_match = None
+        # Ищем наилучшее совпадение (наиболее специфичное имя проекта)
         for p in self.projectsList:
-            if(projName == p.name.strip()):
-                return [p.activePath, p.path]
+            p_name = p.name.strip()
+            # Исправлено: проверяем, содержится ли проект из настроек в строке ссылки 
+            # (так как ссылка может содержать префикс бренда, например "Alpha.HMI.Security-Distr")
+            if p_name in projName:
+                if best_match is None or len(p_name) > len(best_match.name):
+                    best_match = p
                        
-        # 2. Если точного совпадения нет и в имени есть точка (префикс бренда),
-        # пытаемся найти проект по части названия после последней точки (например, HMI-Distro)
-        if '.' in projName:
-            product_part = projName.rsplit('.', 1)[-1].strip()
-            for p in self.projectsList:
-                p_name = p.name.strip()
-                if p_name.endswith(product_part):
-                    return [p.activePath, p.path]
+        if best_match:
+            return [best_match.activePath, best_match.path]
                        
         return False
 

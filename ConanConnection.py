@@ -29,6 +29,11 @@ class ConanParser:
                         self.ee.emit("Logger", ref)
                         return []
 
+                    # Фильтрация для продукта Security-Distr: 
+                    # исключаем все ссылки, содержащие "HMI.", чтобы не попадали билды HMI.Security.
+                    if productName == "Security-Distr" and "HMI." in ref:
+                        continue
+
                     if (ref.find("trei") == -1):
                         self.path.append(ref)
 
@@ -62,6 +67,7 @@ class ConanParser:
     #а редактировать повторно в менеджере, удаляя имя проекта. Надо подумать, как адекватно работать с разными берндами.
     def GetBuilds(self, version: str, productName: str):
         listBuild = []
+        
         for ref in self.path:
             # Проверяем наличие продукта и версии в ссылке
             if '/' in ref and "@" in ref:
@@ -71,12 +77,22 @@ class ConanParser:
                         product_part = parts[0] # Например, "Alpha.HMI-Distro" или "Server"
                         full_version_info = parts[1].split('@')[0] # Версия + билд + ревизия
                         
-                        # Проверяем соответствие продукта: 
-                        # Либо прямое совпадение (Server == Server), 
-                        # либо совпадение с префиксом бренда (Alpha.HMI-Distro заканчивается на .HMI-Distro)
-                        is_correct_product = (product_part == productName or product_part.endswith("." + productName))
+                        # Очищаем имена от суффиксов для корректного сравнения
+                        comp_product_part = product_part.replace("-Distr", "").replace("-Distro", "")
+                        comp_product_name = productName.replace("-Distr", "").replace("-Distro", "")
 
-                        if is_correct_product:
+                        is_valid = False
+                        # 1. Прямое совпадение (например, "Security-Distr" == "Security-Distr")
+                        if comp_product_part == comp_product_name:
+                            is_valid = True
+                        else:
+                            # 2. Проверка на формат Бренд.Продукт (например, "Alpha.HMI.Security-Distr")
+                            # Теперь проверяем, заканчивается ли очищенная часть ссылки на ".ИмяПродукта"
+                            # Это позволяет корректно обрабатывать продукты с точками в названии (напр. HMI.Security)
+                            if comp_product_part.endswith("." + comp_product_name):
+                                is_valid = True
+
+                        if is_valid:
                             # Если эта строка начинается с нашей версии, но НЕ совпадает с ней полностью 
                             # (т.е. содержит дополнительные данные билда), значит это валидный билд
                             if full_version_info.startswith(version) and full_version_info != version:
@@ -98,21 +114,38 @@ class ConanParser:
                         continue
         return sorted(listBuild)
 
-    def GetBrandsForBuild(self, build_ref: str):
+    def GetBrandsForBuild(self, build_ref: str, productName: str):
         """Получает список уникальных брендов для конкретного билда из уже загруженных путей."""
         brands = set()
+        
         try:
-            # build_ref имеет вид "Product/Version+Build" (например, HMI-Distro/1.5.0+build.456)
+            # Очищаем имя проекта от суффиксов для поиска в строке билда
+            cleanProduct = productName.replace("-Distr", "").replace("-Distro", "")
+            
             for ref in self.path:
                 # Проверяем, содержит ли текущий путь наш билд
                 if build_ref in ref:
-                    parts = ref.split('/')
-                    if len(parts) > 0:
-                        full_name = parts[0] # Например, "Alpha.HMI-Distro"
-                        # Если в первой части есть точка, значит перед продуктом стоит бренд
-                        if '.' in full_name:
-                            brand = full_name.rsplit('.', 1)[0]
+                    # Извлекаем основную часть имени (до первого слеша) и убираем суффиксы дистрибутива
+                    full_name = ref.split('/')[0]
+                    base_name = full_name.replace("-Distr", "").replace("-Distro", "")
+                    
+                    # Находим индекс начала продукта в строке билда
+                    idx = base_name.find(cleanProduct)
+                    if idx != -1:
+                        # Все, что до индекса — это бренд (например, "Alpha." или "ICSP.SCADA.")
+                        brand = base_name[:idx].strip()
+                        # Удаляем точки в конце бренда
+                        brand = brand.strip('.')
+                        
+                        if brand:
                             brands.add(brand)
+                    else:
+                        # Резервный вариант на случай, если ключевое слово не найдено (старая логика rsplit)
+                        parts = base_name.rsplit('.', 1)
+                        if len(parts) > 1:
+                            b = parts[0].strip('.')
+                            if b:
+                                brands.add(b)
         except Exception as e:
             self.ee.emit("Logger", f"Error getting brands for build {build_ref}: {e}")
         

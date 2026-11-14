@@ -35,17 +35,22 @@ class Manager():
     def ProjectsList(self):
         lp = []
         for p in self.objSetting.projectsList:
-            name_parts = p.name.split('.')
-            name = name_parts[-1] if len(name_parts) > 1 else p.name
+            name = p.name.strip()
             if name not in lp:
                 lp.append(name)
         return lp
 
     def Loadversions(self, product_name: str):
+        best_match = None
+        # Ищем наилучшее совпадение (наиболее специфичное имя проекта)
         for p in self.objSetting.projectsList:
-            if p.name.endswith(product_name):
-                self.CurrentProject = p
-                break
+            p_name = p.name.strip()
+            if product_name in p_name:
+                if best_match is None or len(p_name) < len(best_match.name):
+                    best_match = p
+        
+        if best_match:
+            self.CurrentProject = best_match
         
         self.CurrentProductName = product_name
 
@@ -62,11 +67,16 @@ class Manager():
         return vList
 
     def LoadHashversions(self, name:str):
+        best_match = None
         for p in self.objSetting.projectsList:
-            if (p.name.endswith(name)):
-                self.CurrentProject = p
-                self.CurrentProductName = name
-                break
+            p_name = p.name.strip()
+            if name in p_name:
+                if best_match is None or len(p_name) < len(best_match.name):
+                    best_match = p
+        
+        if best_match:
+            self.CurrentProject = best_match
+            self.CurrentProductName = name
 
         for node in self.hashVersions:
             if node['Name'] == name:
@@ -92,7 +102,8 @@ class Manager():
         
 
     def GetBrandsForBuild(self, build_ref: str):
-        return self.parser.GetBrandsForBuild(build_ref)
+        # Передаем имя текущего продукта в парсер для корректного отделения бренда от имени проекта
+        return self.parser.GetBrandsForBuild(build_ref, self.CurrentProductName)
 
     def LoadDistrs(self):
         """Должны знать куда скачивать, хеш, репозиторий"""
@@ -145,14 +156,12 @@ class Manager():
             return
 
         for brand in brands:
-            # Construct reference: Brand.Product/Version+Build
-            # Извлекаем часть продукта (после первой точки), чтобы не дублировать старый бренд
-            product_name = self.CurrentProductName
-            if '.' in product_name:
-                product_name = product_name.split('.', 1)[1]
+            # Используем имя проекта из настроек и убираем суффикс -Distr для чистоты ссылки
+            raw_name = self.CurrentProject.name if self.CurrentProject else ""
+            product_part = raw_name # Убрано .replace("-Distr", "") чтобы ссылка соответствовала пути в Conan
 
             # build_ref уже содержит версию и билд (например, 1.5.0+build.456)
-            base_ref = f"{brand}.{product_name}/{build_ref}"
+            base_ref = f"{brand}.{product_part}/{build_ref}"
             full_ref = ""
             
             # Try to find the correct repo from self.Repo
@@ -170,7 +179,7 @@ class Manager():
                         break
 
             if full_ref == "":
-                self.ee.emit("OutputLog", f"Unable to construct reference for {brand}.{product_name}")
+                self.ee.emit("OutputLog", f"Unable to construct reference for {brand}.{product_part}")
                 continue
 
             self.downloadQueue.append(full_ref)
@@ -226,7 +235,7 @@ class Manager():
         return self.userName
 
 #Прослойка между бэком и фронтом. Чтобы не завязываться на прямой передачи данных
-#По событию в conanConnection вызывает событие в GUI.
+#По событии в conanConnection вызывает событие в GUI.
     def Logger(self, text:str): 
         self.ee.emit("OutputLog", text)
         pass

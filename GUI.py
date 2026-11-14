@@ -655,7 +655,6 @@ class GUIManager( ):
         self.mng.SaveComponentToFile()
         
 
-
     def LoadFromFile(self, sender, app_data):
         pathFile = app_data['file_path_name']
         listRefs = self.mng.LoadComponentFromFile(pathFile)
