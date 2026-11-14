@@ -17,6 +17,10 @@ class GUIManager( ):
         self.brandCheckboxes = {} # Changed to dict to support multiple windows
         self.window_data = {}     # To store build/version per window tag
         self.current_build_ref = ""
+        self.is_loading = False
+
+        self.load_queue = []
+        self.project_buttons = {}
 
         self.ee.on("ShowItemQueue", self.ShowItemQueue)
         self.ee.on("RefreshQueue", self.RefreshQueue)
@@ -207,8 +211,10 @@ class GUIManager( ):
     
     def LoadProjects(self, reload: bool = False):
         if (reload):
-            for b in dpg.get_item_children("LeftPanelGroup", 1):
+            children = dpg.get_item_children("LeftPanelGroup", 1)
+            for b in children:
                 dpg.delete_item(b)
+            self.project_buttons.clear()
 
         self.listHashAvailable.clear()
 
@@ -223,7 +229,8 @@ class GUIManager( ):
             else:
                 with dpg.group(horizontal=True, parent="LeftPanelGroup"):
                     idx = dpg.add_button(label="Cache", callback=self.LoadHashVersions, user_data=p)
-                    dpg.add_button(label=p, callback=self.LoadVersions, user_data=p)
+                    prod_btn = dpg.add_button(label=p, callback=self.LoadVersions, user_data=p)
+                    self.project_buttons[p] = prod_btn
                     for n in self.mng.hashVersions:
                         if n['Name'] == p:
                             dpg.bind_item_theme(idx, self.hash_btn_theme)
@@ -231,67 +238,94 @@ class GUIManager( ):
                         else: 
                             dpg.bind_item_theme(idx, self.no_hash_btn_theme)
 
+                    # Подсветка кнопки продукта, если он сейчас загружен
+                    if p == self.mng.CurrentProductName:
+                        dpg.bind_item_theme(prod_btn, self.hash_btn_theme)
+
                     self.listHashAvailable.append({"Projs": p, "id": idx})
                     
         pass
 
     def LoadVersions(self, sender, app_data, user_data):
-        self.listVersions = []
-        dpg.set_value("FilterField", "")
-        loader = dpg.add_loading_indicator(before="VersionsTable", circle_count=10, secondary_color=(43,198,245,255), color=(250,250,255,255))
-        self.Logger("Load versions for " + user_data)
-        dpg.hide_item("VersionsTable")
-        self.listVersions = self.mng.Loadversions(user_data)
+        self.load_queue.append(("version", user_data))
+        self.process_load_queue()
 
-        rows = dpg.get_item_children("VersionsTable", 1)
-        for row in rows:
-            dpg.delete_item(row)
-
-        if (self.listVersions == "Login Error"):
-            dpg.configure_item("LoginErrorPopup", show=True)
-            dpg.delete_item(loader)
-            dpg.show_item("VersionsTable")
-            return
-            
-        for p in self.listVersions:
-                with dpg.table_row(tag=p, parent="VersionsTable"):
-                    with dpg.table_cell():
-                        dpg.add_button(label=p, callback=self.LoadBuilds, user_data=p)
-
-        dpg.delete_item(loader)
-        dpg.show_item("VersionsTable")
-        self.Logger("Finish download versions for " + user_data)
-
-        for node in self.listHashAvailable:
-            if node['Projs'] == user_data:
-                dpg.bind_item_theme(node['id'], self.hash_btn_theme)
-
-        pass
-    
     def LoadHashVersions(self, sender, app_data, user_data):
-        self.listVersions = []
-        dpg.set_value("FilterField", "")
-        self.Logger("Loading cache for " + user_data)
-        dpg.hide_item("VersionsTable")
-        self.listVersions = self.mng.LoadHashversions(user_data)
-        rows = dpg.get_item_children("VersionsTable", 1)
-        for row in rows:
-            dpg.delete_item(row)
+        self.load_queue.append(("hash", user_data))
+        self.process_load_queue()
 
-        if (self.listVersions == ""):
-            dpg.show_item("VersionsTable")
-            self.Logger("Cache is empty for " + user_data)
+    def process_load_queue(self):
+        if self.is_loading or not self.load_queue:
             return
         
-        for p in self.listVersions:
-                with dpg.table_row(tag=p, parent="VersionsTable"):
-                    with dpg.table_cell():
-                        dpg.add_button(label=p, callback=self.LoadBuilds, user_data=p)
-        
-        dpg.show_item("VersionsTable")
-        self.Logger("Finish loading cache for " + user_data)
+        task_type, product_name = self.load_queue.pop(0)
+        self.is_loading = True
+        try:
+            if task_type == "version":
+                self.listVersions = []
+                dpg.set_value("FilterField", "")
+                loader = dpg.add_loading_indicator(before="VersionsTable", circle_count=10, secondary_color=(43,198,245,255), color=(250,250,255,255))
+                self.Logger("Load versions for " + product_name)
+                dpg.hide_item("VersionsTable")
+                self.listVersions = self.mng.Loadversions(product_name)
 
+                rows = dpg.get_item_children("VersionsTable", 1)
+                for row in rows:
+                    dpg.delete_item(row)
 
+                if (self.listVersions == "Login Error"):
+                    dpg.configure_item("LoginErrorPopup", show=True)
+                    dpg.delete_item(loader)
+                    dpg.show_item("VersionsTable")
+                    return
+                    
+                for p in self.listVersions:
+                    with dpg.table_row(tag=p, parent="VersionsTable"):
+                        with dpg.table_cell():
+                            dpg.add_button(label=p, callback=self.LoadBuilds, user_data=p)
+
+                dpg.delete_item(loader)
+                dpg.show_item("VersionsTable")
+                self.Logger("Finish download versions for " + product_name)
+
+                for node in self.listHashAvailable:
+                    if node['Projs'] == product_name:
+                        dpg.bind_item_theme(node['id'], self.hash_btn_theme)
+
+            else: # hash type
+                self.listVersions = []
+                dpg.set_value("FilterField", "")
+                self.Logger("Loading cache for " + product_name)
+                dpg.hide_item("VersionsTable")
+                self.listVersions = self.mng.LoadHashversions(product_name)
+                rows = dpg.get_item_children("VersionsTable", 1)
+                for row in rows:
+                    dpg.delete_item(row)
+
+                if (self.listVersions == ""):
+                    dpg.show_item("VersionsTable")
+                    self.Logger("Cache is empty for " + product_name)
+                    return
+                
+                for p in self.listVersions:
+                    with dpg.table_row(tag=p, parent="VersionsTable"):
+                        with dpg.table_cell():
+                            dpg.add_button(label=p, callback=self.LoadBuilds, user_data=p)
+                
+                dpg.show_item("VersionsTable")
+                self.Logger("Finish loading cache for " + product_name)
+
+            # Update highlighting without reloading the whole list
+            for name, btn in self.project_buttons.items():
+                if name == product_name:
+                    dpg.bind_item_theme(btn, self.hash_btn_theme)
+                else:
+                    dpg.bind_item_theme(btn, self.no_hash_btn_theme)
+
+        finally:
+            self.is_loading = False
+            # Process next item in queue if any
+            self.process_load_queue()
 
     def FilterVersions(self):
         if (self.listVersions == "Login Error"):
