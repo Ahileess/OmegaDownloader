@@ -303,6 +303,10 @@ class GUIManager( ):
                     dpg.delete_item(row)
 
                 if (self.listVersions == ""):
+                    # Сброс подсветки всех кнопок, если кеш пуст
+                    for name, btn in self.project_buttons.items():
+                        dpg.bind_item_theme(btn, self.no_hash_btn_theme)
+                    
                     dpg.show_item("VersionsTable")
                     self.Logger("Cache is empty for " + product_name)
                     return
