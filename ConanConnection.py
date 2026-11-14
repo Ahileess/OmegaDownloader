@@ -19,21 +19,35 @@ class ConanParser:
     
     def GetVersionsList(self, productName, reps):
         try:
-            listVer =[]
+            listVer = []
             for rep in reps:
                 stream = os.popen("conan search *" + productName + "* -r " + rep)
                 
                 for ref in stream:
-                    if(ref.find("Please log") != -1):
+                    ref = ref.strip()
+                    if (ref.find("Please log") != -1):
                         self.ee.emit("Logger", ref)
                         return []
 
                     if (ref.find("trei") == -1):
-                        self.path.append(ref[:-1])
+                        self.path.append(ref)
 
-                    version = re.search(r'/[\dt][\w.+-]*[+.]b\d', ref)
-                    if (version):
-                        listVer.append(version.group()[1:-3])
+                    # Извлекаем версию: берем часть после первого слеша, 
+                    # убираем данные после @ и отсекаем всё начиная с .b или +b + цифра
+                    if '/' in ref:
+                        parts = ref.split('/')
+                        if len(parts) > 1:
+                            version_info = parts[1]
+                            if '@' in version_info:
+                                version_info = version_info.split('@')[0]
+                            
+                            # Находим .b или +b с любой цифрой (например, .b1, +b2 и т.д.)
+                            match = re.search(r'(\.b\d|\+b\d)', version_info)
+                            if match:
+                                # Отрезаем всё начиная с точки или плюса перед b
+                                version_info = version_info[:match.start()]
+                            
+                            listVer.append(version_info)
                 stream.close()
 
             self.path = list(set(self.path)) 
@@ -47,20 +61,41 @@ class ConanParser:
     #Ситуация говна, подгрузка другого бренда заставляет передавать сюда имя проекта, и получать список с этим именем,
     #а редактировать повторно в менеджере, удаляя имя проекта. Надо подумать, как адекватно работать с разными берндами.
     def GetBuilds(self, version: str, productName: str):
-        # Регулярное выражение теперь позволяет наличие любого префикса (бренда) перед именем продукта
-        search_str = r'.*?' + re.escape(productName) + r'/' + re.escape(version.replace("+", "\+")) + r'[+.]b[\w\.-]*@'
         listBuild = []
         for ref in self.path:
-            build = re.search(search_str, ref)
-            if (build):
-                full_ref = build.group()
-                # Извлекаем только часть после первого слэша (например, 1.5.0+build.456)
-                parts = full_ref.split('/')
+            # Проверяем наличие продукта и версии в ссылке
+            if '/' in ref and "@" in ref:
+                parts = ref.split('/')
                 if len(parts) >= 2:
-                    # Отрезаем часть до @ если она есть
-                    build_id = parts[1].split('@')[0]
-                    if build_id not in listBuild:
-                        listBuild.append(build_id)
+                    try:
+                        product_part = parts[0] # Например, "Alpha.HMI-Distro" или "Server"
+                        full_version_info = parts[1].split('@')[0] # Версия + билд + ревизия
+                        
+                        # Проверяем соответствие продукта: 
+                        # Либо прямое совпадение (Server == Server), 
+                        # либо совпадение с префиксом бренда (Alpha.HMI-Distro заканчивается на .HMI-Distro)
+                        is_correct_product = (product_part == productName or product_part.endswith("." + productName))
+
+                        if is_correct_product:
+                            # Если эта строка начинается с нашей версии, но НЕ совпадает с ней полностью 
+                            # (т.е. содержит дополнительные данные билда), значит это валидный билд
+                            if full_version_info.startswith(version) and full_version_info != version:
+                                # Находим первый маркер сборки/ревизии (.b или +b)
+                                match = re.search(r'(\.b\d|\+b\d)', full_version_info)
+                                if match:
+                                    # Определяем часть строки между концом выбранной версии и началом маркера
+                                    start_idx = len(version)
+                                    marker_idx = match.start()
+                                    extra_info = full_version_info[start_idx:marker_idx]
+                                    
+                                    # Если в этой части есть буквы (например, .merge или +add), 
+                                    # значит это другая ветка/дополнение, и мы его игнорируем.
+                                    # Цифры и дефисы разрешены как часть номера версии.
+                                    if not re.search(r'[a-zA-Z]', extra_info):
+                                        if full_version_info not in listBuild:
+                                            listBuild.append(full_version_info)
+                    except Exception:
+                        continue
         return sorted(listBuild)
 
     def GetBrandsForBuild(self, build_ref: str):
@@ -132,7 +167,7 @@ class ConanParser:
         
         self.ee.emit("Logger", f"DEBUG: Starting download process for {full_ref} (OS: {OS})")
         
-        self.ee.emit("Logger", "Find distr for OS:" + OS)
+        self.ee.emit("Logger", "Find distr for OS:"+OS)
         os_distrs = self.CheckOSDistr(full_ref, rep)
         self.ee.emit("Logger", f"DEBUG: Available distrs for {full_ref}: {os_distrs}")
 

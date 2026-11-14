@@ -47,7 +47,7 @@ class GUIManager( ):
                 dpg.add_separator()
                 dpg.add_menu_item(label="Save Queue", callback=self.SaveToFile)
                 dpg.add_separator()
-                dpg.add_menu_item(label="Load Queue", callback=lambda: dpg.show_item("fileDialog"))
+                dpg.add_menu_item(label="Load Queue", callback=self.ShowFileDialog)
                 dpg.add_separator()
                 dpg.add_menu_item(tag="InstCompMenu", label="Installed Components", callback=self.GetInstalledComponents)
                 dpg.add_separator()
@@ -222,8 +222,8 @@ class GUIManager( ):
                 dpg.add_text(default_value=p, color=(181,230,29,255), parent="LeftPanelGroup")
             else:
                 with dpg.group(horizontal=True, parent="LeftPanelGroup"):
-                    dpg.add_button(label=p, callback=self.LoadVersions, user_data=p)
                     idx = dpg.add_button(label="Cache", callback=self.LoadHashVersions, user_data=p)
+                    dpg.add_button(label=p, callback=self.LoadVersions, user_data=p)
                     for n in self.mng.hashVersions:
                         if n['Name'] == p:
                             dpg.bind_item_theme(idx, self.hash_btn_theme)
@@ -320,7 +320,7 @@ class GUIManager( ):
         buttonsBuild = []
         mousepos = dpg.get_mouse_pos()
         mousepos[0] += 200
-        with dpg.window(label=f"{self.mng.CurrentProductName} - {user_data}", tag=f"Win_{user_data}_{brand_group_tag}", pos=mousepos, height=550):
+        with dpg.window(label=f"{self.mng.CurrentProductName} - {user_data}", tag=f"Win_{user_data}_{brand_group_tag}", pos=mousepos, height=550, width=200):
             
             with dpg.group(horizontal=True):
                 with dpg.child_window(width=-1, height=300):
@@ -363,7 +363,7 @@ class GUIManager( ):
         mousepos = dpg.get_mouse_pos()
         mousepos[0] += 200
         
-        with dpg.window(label=f"Brands for {build_ref}", tag=window_tag, pos=mousepos, height=550):
+        with dpg.window(label=f"Brands for {build_ref}", tag=window_tag, pos=mousepos, height=550, width=200):
             with dpg.group(horizontal=True):
                 with dpg.child_window(width=-1, height=300):
                     table_uuid = dpg.generate_uuid()
@@ -715,3 +715,6 @@ class GUIManager( ):
     def AddSelectedBrandsToQueue(self, sender, app_data, user_data):
         # Placeholder logic since checkboxes are not yet implemented in the UI group
         self.ee.emit("OutputLog", "Selection mechanism for brands is not yet implemented.")
+
+    def ShowFileDialog(self):
+        dpg.configure_item("fileDialog", show=True)
