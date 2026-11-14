@@ -17,11 +17,11 @@ class ConanParser:
         pass
 
     
-    def GetVersionsList(self, projectName, reps):
+    def GetVersionsList(self, productName, reps):
         try:
             listVer =[]
             for rep in reps:
-                stream = os.popen("conan search *" + projectName + "* -r " + rep)
+                stream = os.popen("conan search *" + productName + "* -r " + rep)
                 
                 for ref in stream:
                     if(ref.find("Please log") != -1):
@@ -42,36 +42,62 @@ class ConanParser:
             self.ee.emit("Logger", "Check your conan in cmd: conan search")
             return[]
         
-        
         return sorted(list(result))
 
     #Ситуация говна, подгрузка другого бренда заставляет передавать сюда имя проекта, и получать список с этим именем,
     #а редактировать повторно в менеджере, удаляя имя проекта. Надо подумать, как адекватно работать с разными берндами.
-    def GetBuilds(self, version: str, projName: str):
-        str = projName + r'/' + version.replace("+", "\+") + r'[+.]b[\w]*[.]r\w*@'
+    def GetBuilds(self, version: str, productName: str):
+        # Регулярное выражение теперь позволяет наличие любого префикса (бренда) перед именем продукта
+        search_str = r'.*?' + re.escape(productName) + r'/' + re.escape(version.replace("+", "\+")) + r'[+.]b[\w\.-]*@'
         listBuild = []
         for ref in self.path:
-            
-            build = re.search(str, ref)
+            build = re.search(search_str, ref)
             if (build):
-                listBuild.append(build.group()[1:-1])
+                full_ref = build.group()
+                # Извлекаем только часть после первого слэша (например, 1.5.0+build.456)
+                parts = full_ref.split('/')
+                if len(parts) >= 2:
+                    # Отрезаем часть до @ если она есть
+                    build_id = parts[1].split('@')[0]
+                    if build_id not in listBuild:
+                        listBuild.append(build_id)
         return sorted(listBuild)
+
+    def GetBrandsForBuild(self, build_ref: str):
+        """Получает список уникальных брендов для конкретного билда из уже загруженных путей."""
+        brands = set()
+        try:
+            # build_ref имеет вид "Product/Version+Build" (например, HMI-Distro/1.5.0+build.456)
+            for ref in self.path:
+                # Проверяем, содержит ли текущий путь наш билд
+                if build_ref in ref:
+                    parts = ref.split('/')
+                    if len(parts) > 0:
+                        full_name = parts[0] # Например, "Alpha.HMI-Distro"
+                        # Если в первой части есть точка, значит перед продуктом стоит бренд
+                        if '.' in full_name:
+                            brand = full_name.rsplit('.', 1)[0]
+                            brands.add(brand)
+        except Exception as e:
+            self.ee.emit("Logger", f"Error getting brands for build {build_ref}: {e}")
+        
+        return sorted(list(brands))
 
     def GetHash(self, ref:str, OS="Windows"):
         hash = ""
         nameRef = ref.split('/')[0]
-        print("Name: ", nameRef)
+        self.ee.emit("Logger", f"Name: {nameRef}")
         stream = os.popen("conan info " + ref + " -s os=" + OS)
-        print("HASH:")
+        self.ee.emit("Logger", "HASH:")
         for p in stream:
-            print(p)
+            self.ee.emit("Logger", p)
             if (p[:10].rfind("ID: ") != -1):
                 hash = p[8:]
                 pass
 
             if (p[:20].find("Remote:") != -1):
                 rep = p.split('=')[0].split(':')[1][1:]
-                print(rep)
+                self.ee.emit("Logger", rep)
             
             if (p[:20].find("Provides") != -1 and hash != ""):
                 if (p.find(nameRef) != -1):
@@ -80,7 +106,6 @@ class ConanParser:
         stream.close()
         return [hash[:-1], rep]
         
-
     def DownloadDistrs(self, ref, OS, rep, target_path, NodeId):
         self.ee.emit("Logger", "Download "+ ref)
         self.threadUninst = threading.Thread(target=self.DownloadInit, args=(ref, OS, rep, target_path, NodeId))
@@ -104,11 +129,18 @@ class ConanParser:
         self.ee.emit("UpdateHistory", NodeId, ref, OS, "waiting")
         target_path = pathlib.Path(target_path)
         full_ref = ref
+        
+        self.ee.emit("Logger", f"DEBUG: Starting download process for {full_ref} (OS: {OS})")
+        
         self.ee.emit("Logger", "Find distr for OS:" + OS)
-        if (OS not in self.CheckOSDistr(full_ref, rep)):
+        os_distrs = self.CheckOSDistr(full_ref, rep)
+        self.ee.emit("Logger", f"DEBUG: Available distrs for {full_ref}: {os_distrs}")
+
+        if (OS not in os_distrs):
             self.ee.emit("Logger", full_ref + " not find distr for OS: " + OS + " in repositories")
             self.ee.emit("UpdateHistory", NodeId, full_ref, OS, "failed")
             return
+
         try:
             self.ee.emit("Logger", "Try to get a hash and actual repository.")
             hashAndRep = self.GetHash(full_ref, OS) 
@@ -116,6 +148,7 @@ class ConanParser:
             hash = hashAndRep[0]
             if (hash != ""):
                 hash = ":" + hash
+            
             self.ee.emit("Logger", "conan download " + full_ref + hash + " -r " + hashAndRep[1])
             self.ee.emit("UpdateHistory", NodeId, ref, OS, "loading")
             stream = os.popen("conan download " + full_ref + hash + " -r " + hashAndRep[1])
@@ -134,48 +167,59 @@ class ConanParser:
             self.ee.emit("Logger", "Download finished: " + full_ref + " for OS: " + OS)
             print("1233")
             pathCach = self.GetFullDistrPath(full_ref, hash)
+            
             if (pathCach == ""):
                 self.ee.emit("Logger", "Distr path wasn't find. Check your conan.")
                 self.ee.emit("UpdateHistory", NodeId, ref, OS, "failed")
                 return 
             
+            self.ee.emit("Logger", f"DEBUG: Cache path found: {pathCach}")
             target_path.parent.mkdir(parents=True, exist_ok=True)
             
+            # Logic for moving files
             if ((pathCach / 'distr//msi').exists() and OS == "Windows"):
+                self.ee.emit("Logger", f"DEBUG: Copying msi from {pathCach / 'distr//msi'}")
                 shutil.copytree(pathCach/'distr//msi', target_path/'msi', dirs_exist_ok=True)
             elif ((pathCach / 'msi').exists() and OS == "Windows"):
+                self.ee.emit("Logger", f"DEBUG: Copying msi from {pathCach / 'msi'}")
                 shutil.copytree(pathCach/'msi', target_path/'msi', dirs_exist_ok=True)
             elif ((pathCach / 'distr//ru-RU').exists() and OS == "Windows"):
-                print("pathCach")
+                self.ee.emit("Logger", f"DEBUG: Copying ru-RU from {pathCach / 'distr//ru-RU'}")
                 shutil.copytree(pathCach/'distr//ru-RU', target_path/'msi', dirs_exist_ok=True)
             elif ((pathCach / 'distr').exists() and OS == "Windows"):
+                self.ee.emit("Logger", f"DEBUG: Copying distr from {pathCach / 'distr'}")
                 shutil.copytree(pathCach/'distr', target_path/'msi', dirs_exist_ok=True)
             elif (OS == "Windows"):
                 raise FileNotFoundError('kekl')
 
             if ((pathCach / 'distr//deb').exists() and OS == "Linux"):
+                self.ee.emit("Logger", f"DEBUG: Copying deb from {pathCach / 'distr//deb'}")
                 shutil.copytree(pathCach/'distr//deb', target_path/'deb', dirs_exist_ok=True)
             elif ((pathCach / 'deb').exists() and OS == "Linux"):
+                self.ee.emit("Logger", f"DEBUG: Copying deb from {pathCach / 'deb'}")
                 shutil.copytree(pathCach/'deb', target_path/'deb', dirs_exist_ok=True)
             elif ((pathCach / 'distr').exists() and OS == "Linux"):
-                print("pathCach")
+                self.ee.emit("Logger", f"DEBUG: Copying distr from {pathCach / 'distr'}")
                 shutil.copytree(pathCach/'distr', target_path/'deb', dirs_exist_ok=True)
             elif ((pathCach / 'distr//ru-RU').exists() and OS == "Linux"):
+                self.ee.emit("Logger", f"DEBUG: Copying ru-RU from {pathCach / 'distr//ru-RU'}")
                 shutil.copytree(pathCach/'distr//ru-RU', target_path/'deb', dirs_exist_ok=True)
             elif (OS == "Linux"):
                 raise FileNotFoundError('kekl')
 
             if ((pathCach / 'distr//rpm').exists() and OS == "Linux"):
+                self.ee.emit("Logger", f"DEBUG: Copying rpm from {pathCach / 'distr//rpm'}")
                 shutil.copytree(pathCach/'distr//rpm', target_path/'rpm', dirs_exist_ok=True)
             elif ((pathCach / 'rpm').exists() and OS == "Linux"):
+                self.ee.emit("Logger", f"DEBUG: Copying rpm from {pathCach / 'rpm'}")
                 shutil.copytree(pathCach/'rpm', target_path/'rpm', dirs_exist_ok=True)
             elif ((pathCach / 'distr').exists() and OS == "Linux"):
-                print("pathCach")
+                self.ee.emit("Logger", f"DEBUG: Copying distr from {pathCach / 'distr'}")
                 shutil.copytree(pathCach/'distr', target_path/'rpm', dirs_exist_ok=True)
             elif ((pathCach / 'distr//ru-RU').exists() and OS == "Linux"):
+                self.ee.emit("Logger", f"DEBUG: Copying ru-RU from {pathCach / 'distr//ru-RU'}")
                 shutil.copytree(pathCach/'distr//ru-RU', target_path/'rpm', dirs_exist_ok=True)
             
-
         except PermissionError:
             self.ee.emit("UpdateHistory", NodeId, ref, OS, "failed")
             self.ee.emit("Logger", "Permission error! Can't move the distr from conan storage.")
@@ -333,7 +377,7 @@ class ConanParser:
                     continue
                 name = c[:idx]
                 if((".Tools" in name) | (".Alarms" in name) | (".Trends" in name ) |
-                ("AlphaPlatform" in name) | (".Licensing.Agent" in name )):
+                ("AlphaPlatform" in name) | (".Licensing.Agent" in name) ):
                     continue
 
                 if (name.find("AccessPoint") != -1):

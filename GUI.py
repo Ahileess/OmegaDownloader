@@ -14,6 +14,9 @@ class GUIManager( ):
         self.ee = eventEmit
         self.listVersions = ""
         self.listHashAvailable = []
+        self.brandCheckboxes = {} # Changed to dict to support multiple windows
+        self.window_data = {}     # To store build/version per window tag
+        self.current_build_ref = ""
 
         self.ee.on("ShowItemQueue", self.ShowItemQueue)
         self.ee.on("RefreshQueue", self.RefreshQueue)
@@ -312,28 +315,83 @@ class GUIManager( ):
 
     def LoadBuilds(self, sender, app_data, user_data):
         BuildingsList = self.mng.LoadBuilds(user_data)
-        uuid = dpg.generate_uuid()
+        table_uuid = dpg.generate_uuid()
+        brand_group_tag = dpg.generate_uuid() # Generate unique tag first!
         buttonsBuild = []
         mousepos = dpg.get_mouse_pos()
         mousepos[0] += 200
-        with dpg.window(label=user_data, pos=mousepos, height=390):
+        with dpg.window(label=f"{self.mng.CurrentProductName} - {user_data}", tag=f"Win_{user_data}_{brand_group_tag}", pos=mousepos, height=550):
             
-            with dpg.table(tag = uuid, header_row=False, row_background=True,
-                        borders_innerH=True, borders_outerH=True, borders_innerV=True,
-                        borders_outerV=True):
-                dpg.add_table_column()
+            with dpg.group(horizontal=True):
+                with dpg.child_window(width=-1, height=300):
+                    with dpg.table(tag = table_uuid, header_row=False, row_background=True,
+                                   borders_innerH=True, borders_outerH=True, borders_innerV=True,
+                                   borders_outerV=True):
+                        dpg.add_table_column()
 
-                for p in BuildingsList:
-                    rowuuid = dpg.generate_uuid()
-                    buttonsBuild.append({"Uid": rowuuid, "Label": p})
-                    with dpg.table_row(tag=rowuuid):
-                        with dpg.table_cell():
-                            dpg.add_button(label=p, callback=self.AddItemQueue, user_data=[p, self.mng.CurrentProject.name])
-        
-        dpg.add_input_text(before=uuid, callback=self.FilterBuilds, user_data=buttonsBuild, width=-5)
+                        for p in BuildingsList:
+                            rowuuid = dpg.generate_uuid()
+                            buttonsBuild.append({"Uid": rowuuid, "Label": p})
+                            with dpg.table_row(tag=rowuuid):
+                                with dpg.table_cell():
+                                    # Pass the brand_group_tag as a 3rd element in user_data
+                                    dpg.add_button(label=p, callback=self.ShowBrandSelection, user_data=[p, user_data, brand_group_tag])
+                
+                    dpg.add_input_text(before=table_uuid, callback=self.FilterBuilds, user_data=buttonsBuild, width=-5)
+
+                with dpg.child_window(width=-1, height=300): # Changed from -1 to 300 to ensure space for checkboxes
+                    dpg.add_text("Brand Selection:")
+                    with dpg.group(horizontal=True, tag=brand_group_tag):
+                        # Placeholder for checkboxes
+                        pass
+                    # Pass the brand_group_tag to this button as well
+                    dpg.add_button(label="Add Selected Brands", callback=self.AddSelectedBrandsToQueue, user_data=brand_group_tag)
+
         pass
 
-    def FilterBuilds(self, sender, app_data, user_data):
+    def ShowBrandSelection(self, sender, app_data, user_data):
+        build_ref = user_data[0]
+        version = user_data[1]
+        # group_tag is no longer needed for checkboxes as we are using buttons now
+        
+        brands = self.mng.GetBrandsForBuild(build_ref)
+        if not brands:
+            self.ee.emit("OutputLog", "No brands found for this build.")
+            return
+
+        window_tag = f"Win_Brands_{dpg.generate_uuid()}"
+        mousepos = dpg.get_mouse_pos()
+        mousepos[0] += 200
+        
+        with dpg.window(label=f"Brands for {build_ref}", tag=window_tag, pos=mousepos, height=550):
+            with dpg.group(horizontal=True):
+                with dpg.child_window(width=-1, height=300):
+                    table_uuid = dpg.generate_uuid()
+                    buttons_brands = []
+                    with dpg.table(tag=table_uuid, header_row=False, row_background=True,
+                                   borders_innerH=True, borders_outerH=True, borders_innerV=True,
+                                   borders_outerV=True):
+                        dpg.add_table_column()
+
+                        for brand in brands:
+                            rowuuid = dpg.generate_uuid()
+                            buttons_brands.append({"Uid": rowuuid, "Label": brand})
+                            with dpg.table_row(tag=rowuuid):
+                                with dpg.table_cell():
+                                    dpg.add_button(label=brand, 
+                                                    callback=lambda s, a, b=brand: self.AddBrandToQueue(b, build_ref, version, window_tag),
+                                                    user_data=brand)
+                
+                    dpg.add_input_text(before=table_uuid, callback=self.FilterBrands, user_data=buttons_brands, width=-5)
+
+                with dpg.child_window(width=-1, height=-1):
+                    dpg.add_text("Click a brand to add it to the queue.")
+
+    def AddBrandToQueue(self, brand, build_ref, version, window_tag):
+        self.mng.AddItemQueue(build_ref, version, [brand])
+        # dpg.configure_item(window_tag, show=False) # Removed to allow multiple selections
+
+    def FilterBrands(self, sender, app_data, user_data):
         filter = dpg.get_value(sender)
 
         if (filter == ""):
@@ -360,7 +418,7 @@ class GUIManager( ):
         if(ref.find("/build") == -1):
             self.ee.emit("OutputLog", "Invalid reference wasn't added")
         else:
-            self.mng.AddItemQueue([ref, ""], True)
+            self.mng.AddRawReference(ref)
         
         dpg.set_value("AddManualItemQueue", "")
     
@@ -586,7 +644,7 @@ class GUIManager( ):
             self.mng.CopyInstallToClipboard(self.DeleteComponentList)
         else:
             self.ee.emit("OutputLog", "Uninstall Queue is empty!")
-        
+        pass
 
 
     def OpenStorage(self):
@@ -602,7 +660,7 @@ class GUIManager( ):
         pathFile = app_data['file_path_name']
         listRefs = self.mng.LoadComponentFromFile(pathFile)
         for r in listRefs:
-            self.mng.AddItemQueue([r, ""], True)
+            self.mng.AddRawReference(r)
         pass
 
     def SaveLog(self):
@@ -637,3 +695,23 @@ class GUIManager( ):
         self.MainWindow()
         self.LoadProjects()
         pass
+
+    def FilterBuilds(self, sender, app_data, user_data):
+        filter = dpg.get_value(sender)
+
+        if (filter == ""):
+            for i in user_data:
+                dpg.configure_item(i["Uid"], show=True)
+            return
+
+        for i in user_data:
+            lbl = i["Label"]
+            if (lbl.find(filter) == -1):
+                dpg.configure_item(i["Uid"], show=False)
+            else:
+                dpg.configure_item(i["Uid"], show=True)
+        pass
+    
+    def AddSelectedBrandsToQueue(self, sender, app_data, user_data):
+        # Placeholder logic since checkboxes are not yet implemented in the UI group
+        self.ee.emit("OutputLog", "Selection mechanism for brands is not yet implemented.")

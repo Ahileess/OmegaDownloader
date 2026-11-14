@@ -17,11 +17,14 @@ class Manager():
 
         self.Repo = self.objSetting.Repository.split(';')
         self.CurrentProject = None
+        self.CurrentProductName = None
         self.downloadQueue = []
         self.uninstallQueue = []
         self.history = []
         self.hashVersions = []
         self.NodeIdCount:int = 0
+        self.SelectedBuild = None
+        self.SelectedBrands = []
 
         self.userName = self.parser.GetUserName(self.Repo)
 
@@ -32,32 +35,38 @@ class Manager():
     def ProjectsList(self):
         lp = []
         for p in self.objSetting.projectsList:
-            lp.append(p.name)
+            name_parts = p.name.split('.')
+            name = name_parts[-1] if len(name_parts) > 1 else p.name
+            if name not in lp:
+                lp.append(name)
         return lp
 
-    def Loadversions(self, name: str):
+    def Loadversions(self, product_name: str):
         for p in self.objSetting.projectsList:
-            if (p.name == name):
+            if p.name.endswith(product_name):
                 self.CurrentProject = p
-                
+                break
+        
+        self.CurrentProductName = product_name
 
-        vList = self.parser.GetVersionsList(name, self.Repo)
+        vList = self.parser.GetVersionsList(product_name, self.Repo)
 
         if (len(vList) <= 0):
             return "Login Error"
         
         for node in self.hashVersions:
-            if node['Name'] == name:
+            if node['Name'] == product_name:
                 self.hashVersions.remove(node)
-        self.hashVersions.append({"Name":name, "vlist": vList})
+        self.hashVersions.append({"Name":product_name, "vlist": vList})
 
         return vList
 
     def LoadHashversions(self, name:str):
         for p in self.objSetting.projectsList:
-            if (p.name == name):
+            if (p.name.endswith(name)):
                 self.CurrentProject = p
-                
+                self.CurrentProductName = name
+                break
 
         for node in self.hashVersions:
             if node['Name'] == name:
@@ -68,11 +77,22 @@ class Manager():
 
     def LoadBuilds(self, name: str):
         listB = []
-        for l in self.parser.GetBuilds(name, self.CurrentProject.name):
-            idx = l.find(r'/')
-            listB.append(l[idx + 1:])
-        return listB
+        if self.CurrentProductName:
+            # Парсер теперь возвращает уникальные строки "Product/Version+Build"
+            for l in self.parser.GetBuilds(name, self.CurrentProductName):
+                if l not in listB:
+                    listB.append(l)
+        else:
+            # Fallback if CurrentProductName is not set (shouldn't happen in normal flow)
+            if self.CurrentProject:
+                for l in self.parser.GetBuilds(name, self.CurrentProject.name):
+                    if l not in listB:
+                        listB.append(l)
+        return sorted(listB)
         
+
+    def GetBrandsForBuild(self, build_ref: str):
+        return self.parser.GetBrandsForBuild(build_ref)
 
     def LoadDistrs(self):
         """Должны знать куда скачивать, хеш, репозиторий"""
@@ -99,8 +119,8 @@ class Manager():
 
             if(type(proj) is bool):
                 if(proj == False):
-                    self.ee.emit("OutputLog", "Download failed! Unknown name project!")
-                    return
+                    self.ee.emit("OutputLog", f"Download failed! Unknown name project: {projName}")
+                    continue # Changed from return to continue to allow processing other items in queue
 
             if(proj[0]):
                 folder += "\\" + proj[1]
@@ -119,25 +139,70 @@ class Manager():
             self.NodeIdCount += 1
                 
         
-    def AddItemQueue(self, build, FullRef: bool = False):
-        if (FullRef):
-            self.downloadQueue.append(build[0])
-            self.ee.emit("ShowItemQueue", build[0])
+    def AddItemQueue(self, build_ref, version, brands):
+        if not brands:
+            self.ee.emit("OutputLog", "Please select at least one brand.")
             return
 
+        for brand in brands:
+            # Construct reference: Brand.Product/Version+Build
+            # Извлекаем часть продукта (после первой точки), чтобы не дублировать старый бренд
+            product_name = self.CurrentProductName
+            if '.' in product_name:
+                product_name = product_name.split('.', 1)[1]
+
+            # build_ref уже содержит версию и билд (например, 1.5.0+build.456)
+            base_ref = f"{brand}.{product_name}/{build_ref}"
+            full_ref = ""
+            
+            # Try to find the correct repo from self.Repo
+            for repo in self.Repo:
+                candidate = f"{base_ref}@{repo}"
+                if candidate in self.parser.path:
+                    full_ref = candidate
+                    break
+            
+            # Fallback if not found with explicit @repo
+            if full_ref == "":
+                for r in self.parser.path:
+                    if base_ref in r:
+                        full_ref = r
+                        break
+
+            if full_ref == "":
+                self.ee.emit("OutputLog", f"Unable to construct reference for {brand}.{product_name}")
+                continue
+
+            self.downloadQueue.append(full_ref)
+            self.ee.emit("ShowItemQueue", full_ref)
+
+    def AddRawReference(self, ref: str):
+        """Добавляет в очередь уже готовую ссылку (например, из файла или ручного ввода)."""
         full_ref = ""
-        for r in self.parser.path:
-            if (r.rfind(build[0]) != -1):
-                if (r.rfind(build[1]) != -1):
-                    full_ref = r
-            pass
         
-        if(full_ref == ""):
-            self.ee.emit("OutputLog", "Unable to add " + build + ". Not found in artifactory.")
+        # Если ссылка уже содержит репозиторий (@), принимаем её как есть.
+        if "@" in ref:
+            full_ref = ref
+        else:
+            # Пытаемся найти правильный репозиторий, если он не указан явно через @
+            for repo in self.Repo:
+                candidate = f"{ref}@{repo}"
+                if candidate in self.parser.path:
+                    full_ref = candidate
+                    break
+            
+            # Fallback: ищем в списке путей парсера
+            if full_ref == "":
+                for r in self.parser.path:
+                    if ref in r:
+                        full_ref = r
+                        break
+
+        if full_ref == "":
+            self.ee.emit("OutputLog", f"Unable to construct reference for {ref}")
             return
 
         self.downloadQueue.append(full_ref)
-
         self.ee.emit("ShowItemQueue", full_ref)
 
     def DeleteItemQueue(self, ref: str):

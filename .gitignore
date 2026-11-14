@@ -3,3 +3,4 @@
 *.exe
 *.pyc
 *.7z
+.aider*

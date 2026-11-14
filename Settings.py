@@ -45,10 +45,6 @@ class Settings():
         pass
 
     def SaveSettings(self, data):
-        projs = []
-        for p in self.projectsList:
-            projs.append(p.CreateJson())
-        
         jsonstr = json.dumps(data)
         with open("Settings.json", mode="w+") as json_data:
             json_data.write(jsonstr)
@@ -58,9 +54,20 @@ class Settings():
         pass
 
     def checkActivePath(self, projName):
+        projName = projName.strip()
+        # 1. Попытка точного совпадения (для ссылок без префикса бренда)
         for p in self.projectsList:
-            if(projName == p.name):
+            if(projName == p.name.strip()):
                 return [p.activePath, p.path]
+                       
+        # 2. Если точного совпадения нет и в имени есть точка (префикс бренда),
+        # пытаемся найти проект по части названия после последней точки (например, HMI-Distro)
+        if '.' in projName:
+            product_part = projName.rsplit('.', 1)[-1].strip()
+            for p in self.projectsList:
+                p_name = p.name.strip()
+                if p_name.endswith(product_part):
+                    return [p.activePath, p.path]
                        
         return False
 
@@ -79,4 +86,3 @@ class Settings():
     
     def GetOSEnable(self, nameOS: str):
         return self.OSes[nameOS]
-
