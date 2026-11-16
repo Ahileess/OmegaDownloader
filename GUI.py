@@ -84,6 +84,7 @@ class GUIManager( ):
                 dpg.add_separator()
                 with dpg.menu(label="File"):
                     dpg.add_menu_item(label="Settings", callback=self.OpenSettings)
+                    dpg.add_menu_item(label="Theme Settings", callback=self.ThemeSettingsWindow)
                     dpg.add_separator()
                     dpg.add_menu_item(label="Exit")
                 dpg.add_separator()
@@ -816,3 +817,84 @@ class GUIManager( ):
 
     def ShowFileDialog(self):
         dpg.configure_item("fileDialog", show=True)
+
+    def ThemeSettingsWindow(self):
+        # Пресеты
+        dark_theme = {
+            "COLOR_HASH_BTN": (32, 164, 71),
+            "COLOR_NO_HASH_BTN": (67, 71, 80),
+            "COLOR_CHILD_BG": (37, 35, 40),
+            "COLOR_TEXT": (255, 255, 255),
+            "COLOR_BORDER": (188, 184, 175),
+            "COLOR_TABLE_ROW_BG": (35, 34, 33),
+            "COLOR_TABLE_ROW_BG_ALT": (45, 44, 43),
+            "COLOR_SEPARATOR": (188, 184, 175),
+            "COLOR_FRAME_BG": (44, 51, 55),
+            "COLOR_BORDER_SHADOW": (0, 0, 0),
+            "COLOR_BORDER_LIGHT": (158, 160, 162),
+            "COLOR_WINDOW_BG": (133, 135, 138),
+            "COLOR_TITLE_BG_COLLAPSED": (63, 70, 138),
+            "COLOR_TITLE_BG": (0, 116, 131, 213),
+            "COLOR_TITLE_BG_ACTIVE": (14, 100, 179),
+            "COLOR_CHECKMARK": (255, 255, 255)
+        }
+
+        light_theme = {
+            "COLOR_HASH_BTN": (0, 120, 215),
+            "COLOR_NO_HASH_BTN": (200, 200, 200),
+            "COLOR_CHILD_BG": (245, 245, 240),
+            "COLOR_TEXT": (30, 30, 30),
+            "COLOR_BORDER": (180, 180, 180),
+            "COLOR_TABLE_ROW_BG": (255, 255, 255),
+            "COLOR_TABLE_ROW_BG_ALT": (240, 240, 230),
+            "COLOR_SEPARATOR": (200, 200, 200),
+            "COLOR_FRAME_BG": (230, 230, 230),
+            "COLOR_BORDER_SHADOW": (150, 150, 150),
+            "COLOR_BORDER_LIGHT": (220, 220, 220),
+            "COLOR_WINDOW_BG": (248, 248, 250),
+            "COLOR_TITLE_BG_COLLAPSED": (100, 150, 200),
+            "COLOR_TITLE_BG": (70, 130, 180),
+            "COLOR_TITLE_BG_ACTIVE": (0, 100, 200),
+            "COLOR_CHECKMARK": (0, 150, 0)
+        }
+
+        with dpg.window(label="Theme Settings", tag="ThemeSettingsWindow", modal=True, width=600, height=700):
+            with dpg.group(horizontal=True):
+                dpg.add_button(label="Dark Theme", callback=lambda: self._applyPreset(dark_theme))
+                dpg.add_button(label="Light Theme", callback=lambda: self._applyPreset(light_theme))
+
+            dpg.add_separator()
+            
+            # Контейнер для редакторов цветов
+            with dpg.child_window(height=-1, border=True):
+                self.theme_editors = {}
+                for key in self.mng.objSetting.theme.keys():
+                    with dpg.group(horizontal=True):
+                        dpg.add_text(label=key)
+                        editor_tag = f"edit_{key}"
+                        dpg.add_color_edit(tag=editor_tag, default_value=self.mng.objSetting.theme[key])
+                        self.theme_editors[key] = editor_tag
+
+            with dpg.group(horizontal=True):
+                dpg.add_button(label="Save", callback=self.SaveThemeSettings)
+                dpg.add_button(label="Cancel", callback=lambda: dpg.configure_item("ThemeSettingsWindow", show=False))
+
+    def _applyPreset(self, preset_dict):
+        for key, value in preset_dict.items():
+            if key in self.theme_editors:
+                dpg.set_value(self.theme_editors[key], value)
+
+    def SaveThemeSettings(self):
+        new_theme = {}
+        for key, tag in self.theme_editors.items():
+            new_theme[key] = dpg.get_value(tag)
+        
+        # Обновляем тему в объекте настроек
+        self.mng.objSetting.theme = new_theme
+        
+        # Сохраняем все настройки (включая обновленную тему)
+        # Используем логику из SaveSettings, но адаптированную для этого окна
+        setDict = self.mng.objSetting.CreateSettingsDict()
+        self.mng.objSetting.SaveSettings(setDict)
+        
+        dpg.configure_item("ThemeSettingsWindow", show=False)
