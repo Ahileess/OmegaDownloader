@@ -7,11 +7,56 @@ from Manager import Manager
 class GUIManager( ):
     def __init__(self, mng: Manager, eventEmit:EventEmitter) -> None:
         
+        # Сначала инициализируем основные объекты
+        self.mng = mng
+        self.ee = eventEmit
+
+        # Получаем тему из настроек
+        theme = self.mng.objSetting.theme
+        
+        # Если тема пустая (например, при первом запуске), заполняем её дефолтными значениями из GUI.py
+        if not theme:
+            self.mng.objSetting.theme = {
+                "COLOR_HASH_BTN": (32, 164, 71),
+                "COLOR_NO_HASH_BTN": (67, 71, 80),
+                "COLOR_CHILD_BG": (37, 35, 40),
+                "COLOR_TEXT": (255, 255, 255),
+                "COLOR_BORDER": (188, 184, 175),
+                "COLOR_TABLE_ROW_BG": (35, 34, 33),
+                "COLOR_TABLE_ROW_BG_ALT": (45, 44, 43),
+                "COLOR_SEPARATOR": (188, 184, 175),
+                "COLOR_FRAME_BG": (44, 51, 55),
+                "COLOR_BORDER_SHADOW": (0, 0, 0),
+                "COLOR_BORDER_LIGHT": (158, 160, 162),
+                "COLOR_WINDOW_BG": (133, 135, 138),
+                "COLOR_TITLE_BG_COLLAPSED": (63, 70, 138),
+                "COLOR_TITLE_BG": (0, 116, 131, 213),
+                "COLOR_TITLE_BG_ACTIVE": (14, 100, 179),
+                "COLOR_CHECKMARK": (255, 255, 255)
+            }
+            # Обновляем локальную переменную theme после заполнения
+            theme = self.mng.objSetting.theme
+
+        self.COLOR_HASH_BTN = theme.get("COLOR_HASH_BTN")
+        self.COLOR_NO_HASH_BTN = theme.get("COLOR_NO_HASH_BTN")
+        self.COLOR_CHILD_BG = theme.get("COLOR_CHILD_BG")
+        self.COLOR_TEXT = theme.get("COLOR_TEXT")
+        self.COLOR_BORDER = theme.get("COLOR_BORDER")
+        self.COLOR_TABLE_ROW_BG = theme.get("COLOR_TABLE_ROW_BG")
+        self.COLOR_TABLE_ROW_BG_ALT = theme.get("COLOR_TABLE_ROW_BG_ALT")
+        self.COLOR_SEPARATOR = theme.get("COLOR_SEPARATOR")
+        self.COLOR_FRAME_BG = theme.get("COLOR_FRAME_BG")
+        self.COLOR_BORDER_SHADOW = theme.get("COLOR_BORDER_SHADOW")
+        self.COLOR_BORDER_LIGHT = theme.get("COLOR_BORDER_LIGHT")
+        self.COLOR_WINDOW_BG = theme.get("COLOR_WINDOW_BG")
+        self.COLOR_TITLE_BG_COLLAPSED = theme.get("COLOR_TITLE_BG_COLLAPSED")
+        self.COLOR_TITLE_BG = theme.get("COLOR_TITLE_BG")
+        self.COLOR_TITLE_BG_ACTIVE = theme.get("COLOR_TITLE_BG_ACTIVE")
+        self.COLOR_CHECKMARK = theme.get("COLOR_CHECKMARK")
+
         self.WindowManager = []
         self.DeleteComponentList = []
         self.DeleteQueueItems = []
-        self.mng = mng
-        self.ee = eventEmit
         self.listVersions = ""
         self.listHashAvailable = []
         self.brandCheckboxes = {} # Changed to dict to support multiple windows
@@ -178,28 +223,29 @@ class GUIManager( ):
         #Описание темы для UI
         with dpg.theme() as self.hash_btn_theme:
             with dpg.theme_component(dpg.mvButton):
-                dpg.add_theme_color(dpg.mvThemeCol_Button, (32, 164, 71), category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_Button, self.COLOR_HASH_BTN, category=dpg.mvThemeCat_Core)
 
         with dpg.theme() as self.no_hash_btn_theme:
             with dpg.theme_component(dpg.mvButton):
-                dpg.add_theme_color(dpg.mvThemeCol_Button, (67, 71, 80), category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_Button, self.COLOR_NO_HASH_BTN, category=dpg.mvThemeCat_Core)
 
         with dpg.theme() as global_theme:
             with dpg.theme_component(dpg.mvAll):
-                dpg.add_theme_color(dpg.mvThemeCol_Button, (67, 71, 80), category=dpg.mvThemeCat_Core)
-                dpg.add_theme_color(dpg.mvThemeCol_Text, (255,255,255), category=dpg.mvThemeCat_Core)
-                dpg.add_theme_color(dpg.mvThemeCol_Border, (188,184,175), category=dpg.mvThemeCat_Core)
-                dpg.add_theme_color(dpg.mvThemeCol_TableRowBg, (35,34,33), category=dpg.mvThemeCat_Core)
-                dpg.add_theme_color(dpg.mvThemeCol_TableRowBgAlt, (45,44,43), category=dpg.mvThemeCat_Core)
-                dpg.add_theme_color(dpg.mvThemeCol_Separator, (188,184,175), category=dpg.mvThemeCat_Core)
-                dpg.add_theme_color(dpg.mvThemeCol_FrameBg, (44,51,55), category=dpg.mvThemeCat_Core)
-                dpg.add_theme_color(dpg.mvThemeCol_BorderShadow, (0,0,0), category=dpg.mvThemeCat_Core)
-                dpg.add_theme_color(dpg.mvThemeCol_Border, (158,160,162), category=dpg.mvThemeCat_Core)
-                dpg.add_theme_color(dpg.mvThemeCol_WindowBg, (133,135,138), category=dpg.mvThemeCat_Core)
-                dpg.add_theme_color(dpg.mvThemeCol_TitleBgCollapsed, (63,70,138), category=dpg.mvThemeCat_Core)
-                dpg.add_theme_color(dpg.mvThemeCol_TitleBg, (0,116,131,213), category=dpg.mvThemeCat_Core)
-                dpg.add_theme_color(dpg.mvThemeCol_TitleBgActive, (14,100,179), category=dpg.mvThemeCat_Core)
-                dpg.add_theme_color(dpg.mvThemeCol_CheckMark, (255,255,255), category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_Button, self.COLOR_NO_HASH_BTN, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_ChildBg, self.COLOR_CHILD_BG, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_Text, self.COLOR_TEXT, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_Border, self.COLOR_BORDER, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_TableRowBg, self.COLOR_TABLE_ROW_BG, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_TableRowBgAlt, self.COLOR_TABLE_ROW_BG_ALT, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_Separator, self.COLOR_SEPARATOR, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_FrameBg, self.COLOR_FRAME_BG, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_BorderShadow, self.COLOR_BORDER_SHADOW, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_Border, self.COLOR_BORDER_LIGHT, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_WindowBg, self.COLOR_WINDOW_BG, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_TitleBgCollapsed, self.COLOR_TITLE_BG_COLLAPSED, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_TitleBg, self.COLOR_TITLE_BG, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_TitleBgActive, self.COLOR_TITLE_BG_ACTIVE, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_CheckMark, self.COLOR_CHECKMARK, category=dpg.mvThemeCat_Core)
 
 
                 dpg.add_theme_style(dpg.mvStyleVar_WindowRounding, 12, category=dpg.mvThemeCat_Core)
@@ -614,6 +660,8 @@ class GUIManager( ):
         d["Daily"] = dpg.get_value("DailyOut")
         d["OS"] = {"Windows": dpg.get_value("checkWindowsOut"), "Linux": dpg.get_value("checkLinuxOut")}
         d["Projects"] = projs
+        # Сохраняем текущую тему из настроек
+        d["Theme"] = self.mng.objSetting.theme
 
         self.mng.SaveSettings(d)
 

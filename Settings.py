@@ -18,6 +18,9 @@ class Settings():
         self.OSes = None
         self.dailyFolder = False
         self.projectsList = []
+        
+        # Тема инициализируется пустой, так как дефолты теперь в GUI.py
+        self.theme = {}
 
         pass
 
@@ -31,6 +34,11 @@ class Settings():
                 if "Daily" in data:
                     self.dailyFolder = data["Daily"]
                 self.OSes = data["OS"]
+                
+                # Загружаем тему из файла, если она там есть
+                if "Theme" in data:
+                    self.theme = data["Theme"]
+                
                 for p in data["Projects"]:
                     proj = projClass.ProjectClass(p["name"], p["folder"], p["activePath"])
                     self.projectsList.append(proj)
@@ -41,6 +49,8 @@ class Settings():
             d["Daily"] = False
             d["OS"] = {"Windows": True, "Linux": False}
             d["Projects"] = []
+            # При создании нового файла тема будет пустой (GUI.py подставит свои дефолты)
+            d["Theme"] = self.theme
             self.SaveSettings(d)
         pass
 
@@ -79,6 +89,7 @@ class Settings():
         d["Path"] = self.downloadFolder
         d["Daily"] = self.dailyFolder
         d["OS"] = self.OSes
+        d["Theme"] = self.theme
         d["Projects"] = projs
 
         return d
