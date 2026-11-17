@@ -28,6 +28,8 @@ class GUIManager( ):
                 "COLOR_FRAME_BG": (44, 51, 55),
                 "COLOR_BORDER_SHADOW": (0, 0, 0),
                 "COLOR_BORDER_LIGHT": (158, 160, 162),
+                "COLOR_TABLE_BORDER_LIGHT": (180, 180, 180),
+                "COLOR_TABLE_BORDER_STRONG": (140, 140, 140),
                 "COLOR_WINDOW_BG": (133, 135, 138),
                 "COLOR_TITLE_BG_COLLAPSED": (63, 70, 138),
                 "COLOR_TITLE_BG": (0, 116, 131, 213),
@@ -53,6 +55,8 @@ class GUIManager( ):
         self.COLOR_FRAME_BG = theme.get("COLOR_FRAME_BG")
         self.COLOR_BORDER_SHADOW = theme.get("COLOR_BORDER_SHADOW")
         self.COLOR_BORDER_LIGHT = theme.get("COLOR_BORDER_LIGHT")
+        self.COLOR_TABLE_BORDER_LIGHT = theme.get("COLOR_TABLE_BORDER_LIGHT")
+        self.COLOR_TABLE_BORDER_STRONG = theme.get("COLOR_TABLE_BORDER_STRONG")
         self.COLOR_WINDOW_BG = theme.get("COLOR_WINDOW_BG")
         self.COLOR_TITLE_BG_COLLAPSED = theme.get("COLOR_TITLE_BG_COLLAPSED")
         self.COLOR_TITLE_BG = theme.get("COLOR_TITLE_BG")
@@ -110,6 +114,8 @@ class GUIManager( ):
                 dpg.add_theme_color(dpg.mvThemeCol_FrameBg, self.COLOR_FRAME_BG, category=dpg.mvThemeCat_Core)
                 dpg.add_theme_color(dpg.mvThemeCol_BorderShadow, self.COLOR_BORDER_SHADOW, category=dpg.mvThemeCat_Core)
                 dpg.add_theme_color(dpg.mvThemeCol_Border, self.COLOR_BORDER_LIGHT, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_TableBorderLight, self.COLOR_TABLE_BORDER_LIGHT, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_TableBorderStrong, self.COLOR_TABLE_BORDER_STRONG, category=dpg.mvThemeCat_Core)
                 dpg.add_theme_color(dpg.mvThemeCol_WindowBg, self.COLOR_WINDOW_BG, category=dpg.mvThemeCat_Core)
                 dpg.add_theme_color(dpg.mvThemeCol_PopupBg, self.COLOR_WINDOW_BG, category=dpg.mvThemeCat_Core)
                 dpg.add_theme_color(dpg.mvThemeCol_TitleBgCollapsed, self.COLOR_TITLE_BG_COLLAPSED, category=dpg.mvThemeCat_Core)
@@ -851,6 +857,8 @@ class GUIManager( ):
             "COLOR_FRAME_BG": (44, 51, 55),
             "COLOR_BORDER_SHADOW": (0, 0, 0),
             "COLOR_BORDER_LIGHT": (158, 160, 162),
+            "COLOR_TABLE_BORDER_LIGHT": (180, 180, 180),
+            "COLOR_TABLE_BORDER_STRONG": (140, 140, 140),
             "COLOR_WINDOW_BG": (133, 135, 138),
             "COLOR_TITLE_BG_COLLAPSED": (63, 70, 138),
             "COLOR_TITLE_BG": (0, 116, 131, 213),
@@ -875,6 +883,8 @@ class GUIManager( ):
             "COLOR_FRAME_BG": (230, 230, 230),
             "COLOR_BORDER_SHADOW": (150, 150, 150),
             "COLOR_BORDER_LIGHT": (220, 220, 220),
+            "COLOR_TABLE_BORDER_LIGHT": (220, 220, 220),
+            "COLOR_TABLE_BORDER_STRONG": (180, 180, 180),
             "COLOR_WINDOW_BG": (248, 248, 250),
             "COLOR_TITLE_BG_COLLAPSED": (100, 150, 200),
             "COLOR_TITLE_BG": (70, 130, 180),
