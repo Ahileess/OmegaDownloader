@@ -32,7 +32,12 @@ class GUIManager( ):
                 "COLOR_TITLE_BG_COLLAPSED": (63, 70, 138),
                 "COLOR_TITLE_BG": (0, 116, 131, 213),
                 "COLOR_TITLE_BG_ACTIVE": (14, 100, 179),
-                "COLOR_CHECKMARK": (255, 255, 255)
+                "COLOR_CHECKMARK": (255, 255, 255),
+                "COLOR_MENU_BAR_BG": (40, 40, 42),
+                "COLOR_SCROLLBAR_BG": (60, 60, 62),
+                "COLOR_HEADER": (50, 50, 52),
+                "COLOR_HEADER_ACTIVE": (80, 80, 85),
+                "COLOR_HEADER_HOVERED": (70, 70, 75)
             }
             # Обновляем локальную переменную theme после заполнения
             theme = self.mng.objSetting.theme
@@ -53,6 +58,11 @@ class GUIManager( ):
         self.COLOR_TITLE_BG = theme.get("COLOR_TITLE_BG")
         self.COLOR_TITLE_BG_ACTIVE = theme.get("COLOR_TITLE_BG_ACTIVE")
         self.COLOR_CHECKMARK = theme.get("COLOR_CHECKMARK")
+        self.COLOR_MENU_BAR_BG = theme.get("COLOR_MENU_BAR_BG")
+        self.COLOR_SCROLLBAR_BG = theme.get("COLOR_SCROLLBAR_BG")
+        self.COLOR_HEADER = theme.get("COLOR_HEADER")
+        self.COLOR_HEADER_ACTIVE = theme.get("COLOR_HEADER_ACTIVE")
+        self.COLOR_HEADER_HOVERED = theme.get("COLOR_HEADER_HOVERED")
 
         self.WindowManager = []
         self.DeleteComponentList = []
@@ -79,6 +89,51 @@ class GUIManager( ):
         pass
 
     def MainWindow(self):
+        # Описание темы для UI (перенесено в самое начало метода перед созданием любых окон)
+        with dpg.theme() as self.hash_btn_theme:
+            with dpg.theme_component(dpg.mvButton):
+                dpg.add_theme_color(dpg.mvThemeCol_Button, self.COLOR_HASH_BTN, category=dpg.mvThemeCat_Core)
+
+        with dpg.theme() as self.no_hash_btn_theme:
+            with dpg.theme_component(dpg.mvButton):
+                dpg.add_theme_color(dpg.mvThemeCol_Button, self.COLOR_NO_HASH_BTN, category=dpg.mvThemeCat_Core)
+
+        with dpg.theme() as global_theme:
+            with dpg.theme_component(dpg.mvAll):
+                dpg.add_theme_color(dpg.mvThemeCol_Button, self.COLOR_NO_HASH_BTN, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_ChildBg, self.COLOR_CHILD_BG, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_Text, self.COLOR_TEXT, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_Border, self.COLOR_BORDER, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_TableRowBg, self.COLOR_TABLE_ROW_BG, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_TableRowBgAlt, self.COLOR_TABLE_ROW_BG_ALT, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_Separator, self.COLOR_SEPARATOR, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_FrameBg, self.COLOR_FRAME_BG, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_BorderShadow, self.COLOR_BORDER_SHADOW, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_Border, self.COLOR_BORDER_LIGHT, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_WindowBg, self.COLOR_WINDOW_BG, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_PopupBg, self.COLOR_WINDOW_BG, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_TitleBgCollapsed, self.COLOR_TITLE_BG_COLLAPSED, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_TitleBg, self.COLOR_TITLE_BG, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_TitleBgActive, self.COLOR_TITLE_BG_ACTIVE, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_CheckMark, self.COLOR_CHECKMARK, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_MenuBarBg, self.COLOR_MENU_BAR_BG, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_ScrollbarBg, self.COLOR_SCROLLBAR_BG, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_Header, self.COLOR_HEADER, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_HeaderActive, self.COLOR_HEADER_ACTIVE, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_HeaderHovered, self.COLOR_HEADER_HOVERED, category=dpg.mvThemeCat_Core)
+
+                dpg.add_theme_style(dpg.mvStyleVar_WindowRounding, 12, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_style(dpg.mvStyleVar_FrameRounding, 5, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_style(dpg.mvStyleVar_ChildRounding, 5, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_style(dpg.mvStyleVar_CellPadding, x=3, y=5, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_style(dpg.mvStyleVar_ItemSpacing, x=7, y=10, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_style(dpg.mvStyleVar_ScrollbarSize, 15, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_style(dpg.mvStyleVar_FrameBorderSize, 1, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_style(dpg.mvStyleVar_WindowTitleAlign, x=0.5, y=0.5, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_style(dpg.mvStyleVar_TabRounding, 12, category=dpg.mvThemeCat_Core)
+                
+        dpg.bind_theme(global_theme)
+
         with dpg.window(label="Main", tag="MainWindow"):
             with dpg.menu_bar():
                 dpg.add_separator()
@@ -221,46 +276,6 @@ class GUIManager( ):
 
 
 
-        #Описание темы для UI
-        with dpg.theme() as self.hash_btn_theme:
-            with dpg.theme_component(dpg.mvButton):
-                dpg.add_theme_color(dpg.mvThemeCol_Button, self.COLOR_HASH_BTN, category=dpg.mvThemeCat_Core)
-
-        with dpg.theme() as self.no_hash_btn_theme:
-            with dpg.theme_component(dpg.mvButton):
-                dpg.add_theme_color(dpg.mvThemeCol_Button, self.COLOR_NO_HASH_BTN, category=dpg.mvThemeCat_Core)
-
-        with dpg.theme() as global_theme:
-            with dpg.theme_component(dpg.mvAll):
-                dpg.add_theme_color(dpg.mvThemeCol_Button, self.COLOR_NO_HASH_BTN, category=dpg.mvThemeCat_Core)
-                dpg.add_theme_color(dpg.mvThemeCol_ChildBg, self.COLOR_CHILD_BG, category=dpg.mvThemeCat_Core)
-                dpg.add_theme_color(dpg.mvThemeCol_Text, self.COLOR_TEXT, category=dpg.mvThemeCat_Core)
-                dpg.add_theme_color(dpg.mvThemeCol_Border, self.COLOR_BORDER, category=dpg.mvThemeCat_Core)
-                dpg.add_theme_color(dpg.mvThemeCol_TableRowBg, self.COLOR_TABLE_ROW_BG, category=dpg.mvThemeCat_Core)
-                dpg.add_theme_color(dpg.mvThemeCol_TableRowBgAlt, self.COLOR_TABLE_ROW_BG_ALT, category=dpg.mvThemeCat_Core)
-                dpg.add_theme_color(dpg.mvThemeCol_Separator, self.COLOR_SEPARATOR, category=dpg.mvThemeCat_Core)
-                dpg.add_theme_color(dpg.mvThemeCol_FrameBg, self.COLOR_FRAME_BG, category=dpg.mvThemeCat_Core)
-                dpg.add_theme_color(dpg.mvThemeCol_BorderShadow, self.COLOR_BORDER_SHADOW, category=dpg.mvThemeCat_Core)
-                dpg.add_theme_color(dpg.mvThemeCol_Border, self.COLOR_BORDER_LIGHT, category=dpg.mvThemeCat_Core)
-                dpg.add_theme_color(dpg.mvThemeCol_WindowBg, self.COLOR_WINDOW_BG, category=dpg.mvThemeCat_Core)
-                dpg.add_theme_color(dpg.mvThemeCol_TitleBgCollapsed, self.COLOR_TITLE_BG_COLLAPSED, category=dpg.mvThemeCat_Core)
-                dpg.add_theme_color(dpg.mvThemeCol_TitleBg, self.COLOR_TITLE_BG, category=dpg.mvThemeCat_Core)
-                dpg.add_theme_color(dpg.mvThemeCol_TitleBgActive, self.COLOR_TITLE_BG_ACTIVE, category=dpg.mvThemeCat_Core)
-                dpg.add_theme_color(dpg.mvThemeCol_CheckMark, self.COLOR_CHECKMARK, category=dpg.mvThemeCat_Core)
-
-
-                dpg.add_theme_style(dpg.mvStyleVar_WindowRounding, 12, category=dpg.mvThemeCat_Core)
-                dpg.add_theme_style(dpg.mvStyleVar_FrameRounding, 5, category=dpg.mvThemeCat_Core)
-                dpg.add_theme_style(dpg.mvStyleVar_ChildRounding, 5, category=dpg.mvThemeCat_Core)
-                dpg.add_theme_style(dpg.mvStyleVar_CellPadding, x=3, y=5, category=dpg.mvThemeCat_Core)
-                dpg.add_theme_style(dpg.mvStyleVar_ItemSpacing, x=7, y=10, category=dpg.mvThemeCat_Core)
-                dpg.add_theme_style(dpg.mvStyleVar_ScrollbarSize, 15, category=dpg.mvThemeCat_Core)
-                dpg.add_theme_style(dpg.mvStyleVar_FrameBorderSize, 1, category=dpg.mvThemeCat_Core)
-                dpg.add_theme_style(dpg.mvStyleVar_WindowTitleAlign, x=0.5, y=0.5, category=dpg.mvThemeCat_Core)
-                dpg.add_theme_style(dpg.mvStyleVar_TabRounding, 12, category=dpg.mvThemeCat_Core)
-                
-        dpg.bind_theme(global_theme)
-    
     def LoadProjects(self, reload: bool = False):
         if (reload):
             children = dpg.get_item_children("LeftPanelGroup", 1)
@@ -664,7 +679,7 @@ class GUIManager( ):
         # Сохраняем текущую тему из настроек
         d["Theme"] = self.mng.objSetting.theme
 
-        self.mng.SaveSettings(d)
+        self.mng.objSetting.SaveSettings(d)
 
         for i in dpg.get_item_children("ProjectsWindowOut", 1):
             if (dpg.get_item_alias(i) != "ProjectsWindowOutGroup"):  
@@ -836,7 +851,12 @@ class GUIManager( ):
             "COLOR_TITLE_BG_COLLAPSED": (63, 70, 138),
             "COLOR_TITLE_BG": (0, 116, 131, 213),
             "COLOR_TITLE_BG_ACTIVE": (14, 100, 179),
-            "COLOR_CHECKMARK": (255, 255, 255)
+            "COLOR_CHECKMARK": (255, 255, 255),
+            "COLOR_MENU_BAR_BG": (40, 40, 42),
+            "COLOR_SCROLLBAR_BG": (60, 60, 62),
+            "COLOR_HEADER": (50, 50, 52),
+            "COLOR_HEADER_ACTIVE": (80, 80, 85),
+            "COLOR_HEADER_HOVERED": (70, 70, 75)
         }
 
         light_theme = {
@@ -855,7 +875,12 @@ class GUIManager( ):
             "COLOR_TITLE_BG_COLLAPSED": (100, 150, 200),
             "COLOR_TITLE_BG": (70, 130, 180),
             "COLOR_TITLE_BG_ACTIVE": (0, 100, 200),
-            "COLOR_CHECKMARK": (0, 150, 0)
+            "COLOR_CHECKMARK": (0, 150, 0),
+            "COLOR_MENU_BAR_BG": (235, 235, 235),
+            "COLOR_SCROLLBAR_BG": (210, 210, 210),
+            "COLOR_HEADER": (240, 240, 240),
+            "COLOR_HEADER_ACTIVE": (210, 210, 230),
+            "COLOR_HEADER_HOVERED": (225, 225, 225)
         }
 
         with dpg.window(label="Theme Settings", tag="ThemeSettingsWindow", modal=True, width=600, height=700):
@@ -868,9 +893,10 @@ class GUIManager( ):
             # Контейнер для редакторов цветов
             with dpg.child_window(height=-1, border=True):
                 self.theme_editors = {}
+
                 for key in self.mng.objSetting.theme.keys():
                     with dpg.group(horizontal=True):
-                        dpg.add_text(label=key)
+                        dpg.add_text(default_value=key)
                         editor_tag = f"edit_{key}"
                         dpg.add_color_edit(tag=editor_tag, default_value=self.mng.objSetting.theme[key])
                         self.theme_editors[key] = editor_tag
@@ -893,7 +919,6 @@ class GUIManager( ):
         self.mng.objSetting.theme = new_theme
         
         # Сохраняем все настройки (включая обновленную тему)
-        # Используем логику из SaveSettings, но адаптированную для этого окна
         setDict = self.mng.objSetting.CreateSettingsDict()
         self.mng.objSetting.SaveSettings(setDict)
         
