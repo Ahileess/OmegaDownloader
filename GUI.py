@@ -834,6 +834,10 @@ class GUIManager( ):
         dpg.configure_item("fileDialog", show=True)
 
     def ThemeSettingsWindow(self):
+        if dpg.does_item_exist("ThemeSettingsWindow"):
+            dpg.configure_item("ThemeSettingsWindow", show=True)
+            return
+
         # Пресеты
         dark_theme = {
             "COLOR_HASH_BTN": (32, 164, 71),
