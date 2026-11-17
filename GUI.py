@@ -172,10 +172,9 @@ class GUIManager( ):
 
             with dpg.group(horizontal=True):
                 with dpg.child_window(width=450, height=600):
-                    with dpg.child_window(height=65):
+                    with dpg.child_window(height=40):
                         with dpg.group(tag="LoginPanel"):
                             dpg.add_input_text(tag="outputLogin", enabled=False, width=-1)
-                            dpg.add_button(tag="loginButton", label="login", callback=lambda: dpg.configure_item("loginWindow", show=True))
 
                     with dpg.child_window(horizontal_scrollbar=True):
                         with dpg.group(tag="LeftPanelGroup"):

@@ -335,3 +335,7 @@ class Manager():
         self.history.clear()
         self.ee.emit("UpdateHistoryOut")
         pass
+
+    def SaveInstallComponentToFile(self, listComponents):
+        self.parser.SaveInstallComponentToFile(listComponents, self.objSetting.downloadFolder)
+
