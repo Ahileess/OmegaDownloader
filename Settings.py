@@ -89,8 +89,8 @@ class Settings():
         d["Path"] = self.downloadFolder
         d["Daily"] = self.dailyFolder
         d["OS"] = self.OSes
-        d["Theme"] = self.theme
         d["Projects"] = projs
+        d["Theme"] = self.theme
 
         return d
     
