@@ -108,10 +108,10 @@ class Manager():
     def LoadDistrs(self):
         """Должны знать куда скачивать, хеш, репозиторий"""
         if (len(self.downloadQueue) <= 0):
-            self.ee.emit("OutputLog", "The queue is emtpy.")
+            self.ee.emit("OutputLog", "[ERROR] The queue is empty.")
             return
     
-        self.ee.emit("OutputLog", "The queue started to download.")
+        self.ee.emit("OutputLog", "[INFO] The queue started to download.")
         #Работаем с копией очереди.
         localQueue = self.downloadQueue.copy()
 
@@ -130,7 +130,7 @@ class Manager():
 
             if(type(proj) is bool):
                 if(proj == False):
-                    self.ee.emit("OutputLog", f"Download failed! Unknown name project: {projName}")
+                    self.ee.emit("OutputLog", f"[ERROR] Download failed! Unknown project name: {projName}")
                     continue # Changed from return to continue to allow processing other items in queue
 
             if(proj[0]):
@@ -152,7 +152,7 @@ class Manager():
         
     def AddItemQueue(self, build_ref, version, brands):
         if not brands:
-            self.ee.emit("OutputLog", "Please select at least one brand.")
+            self.ee.emit("OutputLog", "[ERROR] Please select at least one brand.")
             return
 
         for brand in brands:
@@ -179,7 +179,7 @@ class Manager():
                         break
 
             if full_ref == "":
-                self.ee.emit("OutputLog", f"Unable to construct reference for {brand}.{product_part}")
+                self.ee.emit("OutputLog", f"[ERROR] Unable to construct reference for {brand}.{product_part}. Check if the project name is correct.")
                 continue
 
             self.downloadQueue.append(full_ref)
@@ -208,7 +208,7 @@ class Manager():
                         break
 
         if full_ref == "":
-            self.ee.emit("OutputLog", f"Unable to construct reference for {ref}")
+            self.ee.emit("OutputLog", f"[ERROR] Unable to construct reference for {ref}. Ensure the reference is correct and repository is available.")
             return
 
         self.downloadQueue.append(full_ref)
@@ -265,14 +265,14 @@ class Manager():
                 return
             
                 
-        self.ee.emit("OutputLog", "Component isn't installed! You're wizard!")
+        self.ee.emit("OutputLog", f"[ERROR] Component '{compName}' is not found in the installation list.")
         pass
 
     def RemoveUninstallComponent(self, compName):
         try:
             self.uninstallQueue.remove(compName)
-        except:
-            self.ee.emit("OutputLog", "Component isn't in Queue! You're wizard!")
+        except ValueError:
+            self.ee.emit("OutputLog", f"[ERROR] Component '{compName}' is not in the uninstallation queue.")
         pass
     
     def SaveInstallToFile(self, compName):
@@ -300,7 +300,7 @@ class Manager():
 
     def SaveComponentToFile(self):
         if(len(self.downloadQueue) <= 0):
-            self.ee.emit("OutpuLog", "Error! Queue is empty!")
+            self.ee.emit("OutputLog", "[ERROR] Queue is empty!")
             return
         
         self.parser.SaveQueueToFile(self.downloadQueue, self.objSetting.downloadFolder)

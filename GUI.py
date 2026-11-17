@@ -340,8 +340,8 @@ class GUIManager( ):
             if task_type == "version":
                 self.listVersions = []
                 # dpg.set_value("FilterField", "") # Удалено, так как виджет удален
-                loader = dpg.add_loading_indicator(before="VersionsTable", circle_count=10, secondary_color=(43,198,245,255), color=(250,250,255,255))
-                self.Logger("Load versions for " + product_name)
+                loader = dpg.add_loading_indicator(before="VersionsTable", circle_count=10, secondary_color=(43,198,245,255), color=(250,250,255,255), )
+                self.Logger("[INFO] Loading versions for " + product_name)
                 dpg.hide_item("VersionsTable")
                 self.listVersions = self.mng.Loadversions(product_name)
 
@@ -362,7 +362,7 @@ class GUIManager( ):
 
                 dpg.delete_item(loader)
                 dpg.show_item("VersionsTable")
-                self.Logger("Finish download versions for " + product_name)
+                self.Logger("[SUCCESS] Finished loading versions for " + product_name)
 
                 for node in self.listHashAvailable:
                     if node['Projs'] == product_name:
@@ -371,7 +371,7 @@ class GUIManager( ):
             else: # hash type
                 self.listVersions = []
                 # dpg.set_value("FilterField", "") # Удалено, так как виджет удален
-                self.Logger("Loading cache for " + product_name)
+                self.Logger("[INFO] Loading cache for " + product_name)
                 dpg.hide_item("VersionsTable")
                 self.listVersions = self.mng.LoadHashversions(product_name)
                 rows = dpg.get_item_children("VersionsTable", 1)
@@ -384,7 +384,7 @@ class GUIManager( ):
                         dpg.bind_item_theme(btn, self.no_hash_btn_theme)
                     
                     dpg.show_item("VersionsTable")
-                    self.Logger("Cache is empty for " + product_name)
+                    self.Logger("[WARNING] Cache is empty for " + product_name)
                     return
                 
                 for p in self.listVersions:
@@ -393,7 +393,7 @@ class GUIManager( ):
                             dpg.add_button(label=p, callback=self.LoadBuilds, user_data=p)
                 
                 dpg.show_item("VersionsTable")
-                self.Logger("Finish loading cache for " + product_name)
+                self.Logger("[SUCCESS] Finished loading cache for " + product_name)
 
             # Update highlighting without reloading the whole list
             for name, btn in self.project_buttons.items():
@@ -756,7 +756,7 @@ class GUIManager( ):
 
     def SaveInstallComponentToFile(self, sender, app_data, user_data):
         if (len(self.DeleteComponentList) > 0):
-            self.mng.SaveInstallToFile(self.DeleteComponentList)
+            self.mng.SaveInstallComponentToFile(self.DeleteComponentList)
         else:
             self.ee.emit("OutputLog", "Uninstall Queue is empty!")
         pass

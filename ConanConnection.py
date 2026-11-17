@@ -26,7 +26,7 @@ class ConanParser:
                 for ref in stream:
                     ref = ref.strip()
                     if (ref.find("Please log") != -1):
-                        self.ee.emit("Logger", ref)
+                        self.ee.emit("Logger", "[ERROR] Conan login failed. Please check your credentials.")
                         return []
 
                     # Фильтрация для продукта Security-Distr: 
@@ -57,8 +57,8 @@ class ConanParser:
 
             self.path = list(set(self.path)) 
             result = set(listVer)
-        except: 
-            self.ee.emit("Logger", "Check your conan in cmd: conan search")
+        except Exception as e:
+            self.ee.emit("Logger", f"[ERROR] Failed to fetch versions for {productName}. Error: {e}")
             return[]
         
         return sorted(list(result))
@@ -110,7 +110,8 @@ class ConanParser:
                                     if not re.search(r'[a-zA-Z]', extra_info):
                                         if full_version_info not in listBuild:
                                             listBuild.append(full_version_info)
-                    except Exception:
+                    except Exception as e:
+                        self.ee.emit("Logger", f"[DEBUG] Skipping reference due to error: {e}")
                         continue
         return sorted(listBuild)
 
@@ -147,25 +148,23 @@ class ConanParser:
                             if b:
                                 brands.add(b)
         except Exception as e:
-            self.ee.emit("Logger", f"Error getting brands for build {build_ref}: {e}")
+            self.ee.emit("Logger", f"[ERROR] Error getting brands for build {build_ref}: {e}")
         
         return sorted(list(brands))
 
     def GetHash(self, ref:str, OS="Windows"):
         hash = ""
         nameRef = ref.split('/')[0]
-        self.ee.emit("Logger", f"Name: {nameRef}")
+        self.ee.emit("Logger", f"[DEBUG] Fetching hash for: {nameRef}")
         stream = os.popen("conan info " + ref + " -s os=" + OS)
-        self.ee.emit("Logger", "HASH:")
         for p in stream:
-            self.ee.emit("Logger", p)
             if (p[:10].rfind("ID: ") != -1):
                 hash = p[8:]
                 pass
 
             if (p[:20].find("Remote:") != -1):
                 rep = p.split('=')[0].split(':')[1][1:]
-                self.ee.emit("Logger", rep)
+                self.ee.emit("Logger", f"[DEBUG] Remote repository: {rep}")
             
             if (p[:20].find("Provides") != -1 and hash != ""):
                 if (p.find(nameRef) != -1):
@@ -175,7 +174,7 @@ class ConanParser:
         return [hash[:-1], rep]
         
     def DownloadDistrs(self, ref, OS, rep, target_path, NodeId):
-        self.ee.emit("Logger", "Download "+ ref)
+        self.ee.emit("Logger", f"[INFO] Starting download: {ref}")
         self.threadUninst = threading.Thread(target=self.DownloadInit, args=(ref, OS, rep, target_path, NodeId))
         self.threadUninst.start()
 
@@ -198,26 +197,25 @@ class ConanParser:
         target_path = pathlib.Path(target_path)
         full_ref = ref
         
-        self.ee.emit("Logger", f"DEBUG: Starting download process for {full_ref} (OS: {OS})")
+        self.ee.emit("Logger", f"[DEBUG] Starting download process for {full_ref} (OS: {OS})")
         
-        self.ee.emit("Logger", "Find distr for OS:"+OS)
+        self.ee.emit("Logger", f"[INFO] Checking available distrs for OS: {OS}")
         os_distrs = self.CheckOSDistr(full_ref, rep)
-        self.ee.emit("Logger", f"DEBUG: Available distrs for {full_ref}: {os_distrs}")
+        self.ee.emit("Logger", f"[DEBUG] Available distrs: {os_distrs}")
 
         if (OS not in os_distrs):
-            self.ee.emit("Logger", full_ref + " not find distr for OS: " + OS + " in repositories")
+            self.ee.emit("Logger", f"[ERROR] No distribution found for OS: {OS} in repositories for {full_ref}")
             self.ee.emit("UpdateHistory", NodeId, full_ref, OS, "failed")
             return
 
         try:
-            self.ee.emit("Logger", "Try to get a hash and actual repository.")
+            self.ee.emit("Logger", "[INFO] Fetching hash and repository...")
             hashAndRep = self.GetHash(full_ref, OS) 
-            self.ee.emit("Logger", "Successfully received the hash and repository for " + full_ref)
             hash = hashAndRep[0]
             if (hash != ""):
                 hash = ":" + hash
             
-            self.ee.emit("Logger", "conan download " + full_ref + hash + " -r " + hashAndRep[1])
+            self.ee.emit("Logger", f"[INFO] Executing: conan download {full_ref}{hash} -r {hashAndRep[1]}")
             self.ee.emit("UpdateHistory", NodeId, ref, OS, "loading")
             stream = os.popen("conan download " + full_ref + hash + " -r " + hashAndRep[1])
             for i in stream:
@@ -226,96 +224,96 @@ class ConanParser:
                     
 
                 if ("ERROR: Binary package not found:" in i):
-                    self.ee.emit("Logger", "Binary package not found!")
+                    self.ee.emit("Logger", "[ERROR] Binary package not found in remote!")
                     self.ee.emit("UpdateHistory", NodeId, ref, OS, "failed")
                     return
                 
             stream.close()
 
-            self.ee.emit("Logger", "Download finished: " + full_ref + " for OS: " + OS)
-            print("1233")
+            self.ee.emit("Logger", f"[SUCCESS] Download finished: {full_ref} ({OS})")
             pathCach = self.GetFullDistrPath(full_ref, hash)
             
             if (pathCach == ""):
-                self.ee.emit("Logger", "Distr path wasn't find. Check your conan.")
+                self.ee.emit("Logger", f"[ERROR] Distribution path not found in conan cache for {full_ref}")
                 self.ee.emit("UpdateHistory", NodeId, ref, OS, "failed")
                 return 
             
-            self.ee.emit("Logger", f"DEBUG: Cache path found: {pathCach}")
+            self.ee.emit("Logger", f"[DEBUG] Cache path: {pathCach}")
             target_path.parent.mkdir(parents=True, exist_ok=True)
             
             # Logic for moving files
             if ((pathCach / 'distr//msi').exists() and OS == "Windows"):
-                self.ee.emit("Logger", f"DEBUG: Copying msi from {pathCach / 'distr//msi'}")
+                self.ee.emit("Logger", f"[DEBUG] Copying msi from {pathCach / 'distr//msi'}")
                 shutil.copytree(pathCach/'distr//msi', target_path/'msi', dirs_exist_ok=True)
             elif ((pathCach / 'msi').exists() and OS == "Windows"):
-                self.ee.emit("Logger", f"DEBUG: Copying msi from {pathCach / 'msi'}")
+                self.ee.emit("Logger", f"[DEBUG] Copying msi from {pathCach / 'msi'}")
                 shutil.copytree(pathCach/'msi', target_path/'msi', dirs_exist_ok=True)
             elif ((pathCach / 'distr//ru-RU').exists() and OS == "Windows"):
-                self.ee.emit("Logger", f"DEBUG: Copying ru-RU from {pathCach / 'distr//ru-RU'}")
+                self.ee.emit("Logger", f"[DEBUG] Copying ru-RU from {pathCach / 'distr//ru-RU'}")
                 shutil.copytree(pathCach/'distr//ru-RU', target_path/'msi', dirs_exist_ok=True)
             elif ((pathCach / 'distr').exists() and OS == "Windows"):
-                self.ee.emit("Logger", f"DEBUG: Copying distr from {pathCach / 'distr'}")
+                self.ee.emit("Logger", f"[DEBUG] Copying distr from {pathCach / 'distr'}")
                 shutil.copytree(pathCach/'distr', target_path/'msi', dirs_exist_ok=True)
             elif (OS == "Windows"):
-                raise FileNotFoundError('kekl')
+                raise FileNotFoundError(f"No valid MSI files found in cache for {full_ref}")
 
             if ((pathCach / 'distr//deb').exists() and OS == "Linux"):
-                self.ee.emit("Logger", f"DEBUG: Copying deb from {pathCach / 'distr//deb'}")
+                self.ee.emit("Logger", f"[DEBUG] Copying deb from {pathCach / 'distr//deb'}")
                 shutil.copytree(pathCach/'distr//deb', target_path/'deb', dirs_exist_ok=True)
             elif ((pathCach / 'deb').exists() and OS == "Linux"):
-                self.ee.emit("Logger", f"DEBUG: Copying deb from {pathCach / 'deb'}")
+                self.ee.emit("Logger", f"[DEBUG] Copying deb from {pathCach / 'deb'}")
                 shutil.copytree(pathCach/'deb', target_path/'deb', dirs_exist_ok=True)
             elif ((pathCach / 'distr').exists() and OS == "Linux"):
-                self.ee.emit("Logger", f"DEBUG: Copying distr from {pathCach / 'distr'}")
+                self.ee.emit("Logger", f"[DEBUG] Copying distr from {pathCach / 'distr'}")
                 shutil.copytree(pathCach/'distr', target_path/'deb', dirs_exist_ok=True)
             elif ((pathCach / 'distr//ru-RU').exists() and OS == "Linux"):
-                self.ee.emit("Logger", f"DEBUG: Copying ru-RU from {pathCach / 'distr//ru-RU'}")
+                self.ee.emit("Logger", f"[DEBUG] Copying ru-RU from {pathCach / 'distr//ru-RU'}")
                 shutil.copytree(pathCach/'distr//ru-RU', target_path/'deb', dirs_exist_ok=True)
             elif (OS == "Linux"):
-                raise FileNotFoundError('kekl')
+                raise FileNotFoundError(f"No valid DEB files found in cache for {full_ref}")
 
             if ((pathCach / 'distr//rpm').exists() and OS == "Linux"):
-                self.ee.emit("Logger", f"DEBUG: Copying rpm from {pathCach / 'distr//rpm'}")
+                self.ee.emit("Logger", f"[DEBUG] Copying rpm from {pathCach / 'distr//rpm'}")
                 shutil.copytree(pathCach/'distr//rpm', target_path/'rpm', dirs_exist_ok=True)
             elif ((pathCach / 'rpm').exists() and OS == "Linux"):
-                self.ee.emit("Logger", f"DEBUG: Copying rpm from {pathCach / 'rpm'}")
+                self.ee.emit("Logger", f"[DEBUG] Copying rpm from {pathCach / 'rpm'}")
                 shutil.copytree(pathCach/'rpm', target_path/'rpm', dirs_exist_ok=True)
             elif ((pathCach / 'distr').exists() and OS == "Linux"):
-                self.ee.emit("Logger", f"DEBUG: Copying distr from {pathCach / 'distr'}")
+                self.ee.emit("Logger", f"[DEBUG] Copying distr from {pathCach / 'distr'}")
                 shutil.copytree(pathCach/'distr', target_path/'rpm', dirs_exist_ok=True)
             elif ((pathCach / 'distr//ru-RU').exists() and OS == "Linux"):
-                self.ee.emit("Logger", f"DEBUG: Copying ru-RU from {pathCach / 'distr//ru-RU'}")
+                self.ee.emit("Logger", f"[DEBUG] Copying ru-RU from {pathCach / 'distr//ru-RU'}")
                 shutil.copytree(pathCach/'distr//ru-RU', target_path/'rpm', dirs_exist_ok=True)
+            elif (OS == "Linux"):
+                raise FileNotFoundError(f"No valid RPM files found in cache for {full_ref}")
             
         except PermissionError:
             self.ee.emit("UpdateHistory", NodeId, ref, OS, "failed")
-            self.ee.emit("Logger", "Permission error! Can't move the distr from conan storage.")
+            self.ee.emit("Logger", f"[ERROR] Permission denied! Cannot move files to: {target_path}")
             return
         except FileExistsError:
             self.ee.emit("UpdateHistory", NodeId, ref, OS, "failed")
-            self.ee.emit("Logger", "Error! File already exists with reference: " + full_ref)
+            self.ee.emit("Logger", f"[ERROR] File already exists in target folder: {target_path}")
             return
-        except FileNotFoundError:
+        except FileNotFoundError as e:
             self.ee.emit("UpdateHistory", NodeId, ref, OS, "failed")
-            self.ee.emit("Logger", "Error! File not found with reference: " + full_ref)
+            self.ee.emit("Logger", f"[ERROR] File not found during move: {e}")
             return
-        except OSError:
+        except OSError as e:
             self.ee.emit("UpdateHistory", NodeId, ref, OS, "failed")
-            self.ee.emit("Logger", "Rise system error. Have a good day!")
+            self.ee.emit("Logger", f"[ERROR] System error occurred: {e}")
             return
-        except:
+        except Exception as e:
             self.ee.emit("UpdateHistory", NodeId, ref, OS, "failed")
-            self.ee.emit("Logger", full_ref + " for OS: " + OS + "finished with error")
+            self.ee.emit("Logger", f"[ERROR] Unexpected error during download of {full_ref}: {e}")
             return
 
         self.ee.emit("UpdateHistory", NodeId, ref, OS, "done")
-        self.ee.emit("Logger", full_ref + " for OS: " + OS + " has been downloaded.")
+        self.ee.emit("Logger", f"[SUCCESS] Finished downloading: {full_ref} ({OS})")
         return
 
     def GetFullDistrPath(self, ref:str, hash:str ):
-        self.ee.emit("Logger", "Starting moving files.")
-        print("Ref: " + ref + " Hash: " + hash)
+        self.ee.emit("Logger", "[DEBUG] Calculating full distribution path.")
         try:
             cachDir = pathlib.Path(self.GetConanStorage()[:-1])
             a_idx = ref.rfind('@')
@@ -328,8 +326,8 @@ class ConanParser:
             if conan_link.exists():
                 cachDir = pathlib.Path(conan_link.read_text(encoding="utf-8"))
 
-        except:
-            self.ee.emit("Logger", "The path to distr is invalid. Reference: " + ref + ":" + hash)
+        except Exception as e:
+            self.ee.emit("Logger", f"[ERROR] Invalid path calculation for {ref}: {e}")
             return ""      
 
         return cachDir
@@ -342,8 +340,8 @@ class ConanParser:
                 if (path != ""):
                     p = path
             stream.close()
-        except:
-            self.ee.emit("Logger", "Error conan config get storage.path. Check your conan")
+        except Exception as e:
+            self.ee.emit("Logger", f"[ERROR] Failed to retrieve conan storage path: {e}")
             return ""
 
         return p
@@ -360,8 +358,8 @@ class ConanParser:
                         OSList.add("Linux")
                     
                 stream.close()
-        except:
-            self.ee.emit("Logger", "Didn't work \'conan search " + ref + " -r " + repo + "\'")
+        except Exception as e:
+            self.ee.emit("Logger", f"[ERROR] Failed to search repositories for {ref}: {e}")
             return set()
 
         return OSList
@@ -375,8 +373,8 @@ class ConanParser:
                     user = re.search(r': \'\w*\'', s)[0][3:-1]
 
             stream.close()
-        except:
-            self.ee.emit("Logger", "Some problems with conan user. Check it in cmd!")
+        except Exception as e:
+            self.ee.emit("Logger", f"[ERROR] Problems with 'conan user' command: {e}")
 
         return user
 
@@ -390,8 +388,8 @@ class ConanParser:
                 for i in stream:
                     self.ee.emit("Logger", i)
                 stream.close()
-        except:
-            self.ee.emit("Logger", "Some problems with \"conan user login\". Check it in cmd!")
+        except Exception as e:
+            self.ee.emit("Logger", f"[ERROR] Failed to perform 'conan user login': {e}")
         pass
 
     def GetInstalledComponents(self):
@@ -410,14 +408,14 @@ class ConanParser:
                     self.installedComponents.append(software)
 
             self.installedComponents.sort(key=lambda x:(x["name"]))
-        except:
-            self.ee.emit("Logger", "Some problems with rights! Open soft with admin rights.")
+        except Exception as e:
+            self.ee.emit("Logger", f"[ERROR] Failed to retrieve installed software (check admin rights): {e}")
 
         
         return self.installedComponents
 
     def UninstallComponents(self, listComponents:list):
-        self.ee.emit("Logger", "Start uninstall!")
+        self.ee.emit("Logger", "[INFO] Starting uninstallation process...")
         self.threadUninst = threading.Thread(target=self.UninstallProcess, args=(listComponents,))
         self.threadUninst.start()
         
@@ -425,13 +423,13 @@ class ConanParser:
     def UninstallProcess(self, listComponents:list):
         for i in listComponents:
             counter = 0
-            self.ee.emit("Logger", "Uninstall " + i)
+            self.ee.emit("Logger", f"[INFO] Uninstalling: {i}")
             stream = os.popen("wmic product where name=\"" + i + "\" call uninstall /nointeractive")
             for s in stream:
                 counter += 1
                 self.ee.emit("Logger", f"{counter}0%")
-            self.ee.emit("Logger", "Uninstall " + i + " finished")
-        self.ee.emit("Logger", "Unistall Finished!")
+            self.ee.emit("Logger", f"[SUCCESS] Uninstalled: {i}")
+        self.ee.emit("Logger", "[SUCCESS] All uninstallation tasks finished!")
         self.ee.emit("ThreadEnd")
         pass
 
@@ -444,7 +442,7 @@ class ConanParser:
                 if (idx == -1):
                     continue
                 name = c[:idx]
-                if((".Tools" in name) | (".Alarms" in name) | (".Trends" in name ) |
+                if ((".Tools" in name) | (".Alarms" in name) | (".Trends" in name ) |
                 ("AlphaPlatform" in name) | (".Licensing.Agent" in name) ):
                     continue
 
@@ -479,13 +477,13 @@ class ConanParser:
 
             if (path == ""):
                 pyperclip.copy(refers)
-                self.ee.emit("Logger", "Success! Copy to Clipboard.")
+                self.ee.emit("Logger", "[SUCCESS] References copied to clipboard.")
                 return
             with open(path + r'\InstalledComponent.txt', 'w') as f:
                 f.write(f"{refers}")
-            self.ee.emit("Logger", "Success! File saved to " + path + r'\InstalledComponent.txt')
-        except:
-            self.ee.emit("Logger", "Error! File didn't save.")
+            self.ee.emit("Logger", f"[SUCCESS] File saved to {path}r\InstalledComponent.txt")
+        except Exception as e:
+            self.ee.emit("Logger", f"[ERROR] Failed to save installed components: {e}")
         
 
     def OpenExplorer(self, path):
@@ -493,15 +491,18 @@ class ConanParser:
             stream = os.popen("explorer " + path)
             stream.close()
             pass
-        except:
-            self.ee.emit("Logger", "Can't open explorer!")
+        except Exception as e:
+            self.ee.emit("Logger", f"[ERROR] Could not open explorer for {path}: {e}")
             pass
     
     def SaveQueueToFile(self, queue, path):
-        with open(path + r'\References.txt', 'w') as f:
-            for ref in queue:
-                f.write(f"{ref}\n")
-        self.ee.emit("Logger", "Save queue to file: " + path + r'\References.txt')
+        try:
+            with open(path + r'\References.txt', 'w') as f:
+                for ref in queue:
+                    f.write(f"{ref}\n")
+            self.ee.emit("Logger", f"[SUCCESS] Queue saved to {path}r\References.txt")
+        except Exception as e:
+            self.ee.emit("Logger", f"[ERROR] Failed to save queue file: {e}")
         pass
 
     def LoadQueueFromFile(self, filePath):
@@ -510,18 +511,24 @@ class ConanParser:
                 with open(filePath, 'r') as f:
                     refs = f.readlines()
                     refs = [ref.rstrip() for ref in refs]
-                self.ee.emit("Logger", "Load queue from file: " + filePath)
+                self.ee.emit("Logger", f"[INFO] Loaded queue from file: {filePath}")
                 return refs
-            except:
-                self.ee.emit("Logger", "Failed! Invalid file: " + filePath)
+            except Exception as e:
+                self.ee.emit("Logger", f"[ERROR] Failed to read file {filePath}: {e}")
         return []
 
     def SaveLogToFile(self, log, path):
-        with open(path + r'\Log.txt', 'w') as f:
-            f.write(log)
-        
-        self.ee.emit("Logger", "Log saved to Log.txt" + path + r'\Log.txt')
+        try:
+            with open(path + r'\Log.txt', 'w') as f:
+                f.write(log)
+            self.ee.emit("Logger", f"[SUCCESS] Log saved to {path}r\Log.txt")
+        except Exception as e:
+            self.ee.emit("Logger", f"[ERROR] Failed to save log file: {e}")
 
     def ConanStorageSize(self):
-        root_directory = pathlib.Path(self.GetConanStorage()[:-1])
-        return sum(f.stat().st_size for f in root_directory.glob('**/*') if f.is_file())
+        try:
+            root_directory = pathlib.Path(self.GetConanStorage()[:-1])
+            return sum(f.stat().st_size for f in root_directory.glob('**/*') if f.is_file())
+        except Exception as e:
+            self.ee.emit("Logger", f"[ERROR] Failed to calculate storage size: {e}")
+            return 0
