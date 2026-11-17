@@ -15,8 +15,6 @@ def dpg_fonts_init():
     with dpg.font_registry():
         # first argument ids the path to the .ttf or .otf file
         with dpg.font(resource_path("consola.ttf"), 14, tag='odeplr_default_font') as default_font:
-            dpg.add_font_range_hint(dpg.mvFontRangeHint_Default)
-            dpg.add_font_range_hint(dpg.mvFontRangeHint_Cyrillic)
             _cyrillic_character_remap()
         """with dpg.font("Consola.ttf", 13, tag='odeplr_small_font') as small_font:
             dpg.add_font_range_hint(dpg.mvFontRangeHint_Default)
