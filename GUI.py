@@ -894,16 +894,21 @@ class GUIManager( ):
 
             dpg.add_separator()
             
-            # Контейнер для редакторов цветов
+            # Контейнер для редакторов цветов с использованием таблицы для выравнивания
             with dpg.child_window(height=-1, border=True):
                 self.theme_editors = {}
+                with dpg.table(header_row=False, row_background=True, 
+                                borders_innerH=True, borders_outerH=True, 
+                                borders_innerV=True, borders_outerV=True):
+                    dpg.add_table_column(width=300) # Фиксированная ширина для названий параметров
+                    dpg.add_table_column()
 
-                for key in self.mng.objSetting.theme.keys():
-                    with dpg.group(horizontal=True):
-                        dpg.add_text(default_value=key)
-                        editor_tag = f"edit_{key}"
-                        dpg.add_color_edit(tag=editor_tag, default_value=self.mng.objSetting.theme[key])
-                        self.theme_editors[key] = editor_tag
+                    for key in self.mng.objSetting.theme.keys():
+                        with dpg.table_row():
+                            dpg.add_text(default_value=key)
+                            editor_tag = f"edit_{key}"
+                            dpg.add_color_edit(tag=editor_tag, default_value=self.mng.objSetting.theme[key])
+                            self.theme_editors[key] = editor_tag
 
             with dpg.group(horizontal=True):
                 dpg.add_button(label="Save", callback=self.SaveThemeSettings)
