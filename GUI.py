@@ -39,7 +39,8 @@ class GUIManager( ):
                 "COLOR_SCROLLBAR_BG": (60, 60, 62),
                 "COLOR_HEADER": (50, 50, 52),
                 "COLOR_HEADER_ACTIVE": (80, 80, 85),
-                "COLOR_HEADER_HOVERED": (70, 70, 75)
+                "COLOR_HEADER_HOVERED": (70, 70, 75),
+                "COLOR_TABLE_HEADER": (60, 60, 62)
             }
             # Обновляем локальную переменную theme после заполнения
             theme = self.mng.objSetting.theme
@@ -67,6 +68,7 @@ class GUIManager( ):
         self.COLOR_HEADER = theme.get("COLOR_HEADER")
         self.COLOR_HEADER_ACTIVE = theme.get("COLOR_HEADER_ACTIVE")
         self.COLOR_HEADER_HOVERED = theme.get("COLOR_HEADER_HOVERED")
+        self.COLOR_TABLE_HEADER = theme.get("COLOR_TABLE_HEADER")
 
         self.WindowManager = []
         self.DeleteComponentList = []
@@ -127,6 +129,7 @@ class GUIManager( ):
                 dpg.add_theme_color(dpg.mvThemeCol_Header, self.COLOR_HEADER, category=dpg.mvThemeCat_Core)
                 dpg.add_theme_color(dpg.mvThemeCol_HeaderActive, self.COLOR_HEADER_ACTIVE, category=dpg.mvThemeCat_Core)
                 dpg.add_theme_color(dpg.mvThemeCol_HeaderHovered, self.COLOR_HEADER_HOVERED, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_TableHeaderBg, self.COLOR_TABLE_HEADER, category=dpg.mvThemeCat_Core)
 
                 dpg.add_theme_style(dpg.mvStyleVar_WindowRounding, 12, category=dpg.mvThemeCat_Core)
                 dpg.add_theme_style(dpg.mvStyleVar_FrameRounding, 5, category=dpg.mvThemeCat_Core)
@@ -868,7 +871,8 @@ class GUIManager( ):
             "COLOR_SCROLLBAR_BG": (60, 60, 62),
             "COLOR_HEADER": (50, 50, 52),
             "COLOR_HEADER_ACTIVE": (80, 80, 85),
-            "COLOR_HEADER_HOVERED": (70, 70, 75)
+            "COLOR_HEADER_HOVERED": (70, 70, 75),
+            "COLOR_TABLE_HEADER": (60, 60, 62)
         }
 
         light_theme = {
@@ -894,7 +898,8 @@ class GUIManager( ):
             "COLOR_SCROLLBAR_BG": (210, 210, 210),
             "COLOR_HEADER": (240, 240, 240),
             "COLOR_HEADER_ACTIVE": (210, 210, 230),
-            "COLOR_HEADER_HOVERED": (225, 225, 225)
+            "COLOR_HEADER_HOVERED": (225, 225, 225),
+            "COLOR_TABLE_HEADER": (240, 240, 240)
         }
 
         with dpg.window(label="Theme Settings", tag="ThemeSettingsWindow", modal=True, width=600, height=760):
