@@ -887,13 +887,19 @@ class GUIManager( ):
             "COLOR_HEADER_HOVERED": (225, 225, 225)
         }
 
-        with dpg.window(label="Theme Settings", tag="ThemeSettingsWindow", modal=True, width=600, height=700):
+        with dpg.window(label="Theme Settings", tag="ThemeSettingsWindow", modal=True, width=600, height=760):
+            # Пресеты тем
             with dpg.group(horizontal=True):
                 dpg.add_button(label="Dark Theme", callback=lambda: self._applyPreset(dark_theme))
                 dpg.add_button(label="Light Theme", callback=lambda: self._applyPreset(light_theme))
 
             dpg.add_separator()
-            
+
+            # Кнопки сохранения и отмены (теперь сверху и фиксированные)
+            with dpg.group(horizontal=True):
+                dpg.add_button(label="Save", callback=self.SaveThemeSettings)
+                dpg.add_button(label="Cancel", callback=lambda: dpg.configure_item("ThemeSettingsWindow", show=False))
+
             # Контейнер для редакторов цветов с использованием таблицы для выравнивания
             with dpg.child_window(height=-1, border=True):
                 self.theme_editors = {}
@@ -909,10 +915,6 @@ class GUIManager( ):
                             editor_tag = f"edit_{key}"
                             dpg.add_color_edit(tag=editor_tag, default_value=self.mng.objSetting.theme[key])
                             self.theme_editors[key] = editor_tag
-
-            with dpg.group(horizontal=True):
-                dpg.add_button(label="Save", callback=self.SaveThemeSettings)
-                dpg.add_button(label="Cancel", callback=lambda: dpg.configure_item("ThemeSettingsWindow", show=False))
 
     def _applyPreset(self, preset_dict):
         for key, value in preset_dict.items():
