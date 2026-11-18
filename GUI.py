@@ -338,7 +338,7 @@ class GUIManager( ):
         try:
             if task_type == "version":
                 self.listVersions = []
-                # dpg.set_value("FilterField", "") # Удалено, так как виджет удален
+                dpg.set_value("FilterField", "")
                 loader = dpg.add_loading_indicator(before="VersionsTable", circle_count=10, secondary_color=(43,198,245,255), color=(250,250,255,255), )
                 self.Logger("[INFO] Loading versions for " + product_name)
                 dpg.hide_item("VersionsTable")
