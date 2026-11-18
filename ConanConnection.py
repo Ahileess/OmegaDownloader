@@ -156,7 +156,12 @@ class ConanParser:
         hash = ""
         nameRef = ref.split('/')[0]
         self.ee.emit("Logger", f"[DEBUG] Fetching hash for: {nameRef}")
-        stream = os.popen("conan info " + ref + " -s os=" + OS)
+        
+        if "-Doc" in nameRef:
+            stream = os.popen("conan info " + ref)
+        else:
+            stream = os.popen("conan info " + ref + " -s os=" + OS)
+
         for p in stream:
             if (p[:10].rfind("ID: ") != -1):
                 hash = p[8:]
@@ -189,6 +194,9 @@ class ConanParser:
             self.DownloadProcess(ref, "Windows", rep, target_path, NodeId)
             self.DownloadProcess(ref, "Linux", rep, target_path, NodeId)
             return
+        if (osActive == "AnyOS"):
+            self.DownloadProcess(ref, "AnyOS", rep, target_path, NodeId)
+            return
         pass
         
     def DownloadProcess(self, ref, OS, rep, target_path, NodeId):
@@ -204,9 +212,13 @@ class ConanParser:
         self.ee.emit("Logger", f"[DEBUG] Available distrs: {os_distrs}")
 
         if (OS not in os_distrs):
-            self.ee.emit("Logger", f"[ERROR] No distribution found for OS: {OS} in repositories for {full_ref}")
-            self.ee.emit("UpdateHistory", NodeId, full_ref, OS, "failed")
-            return
+            if "-Doc" in full_ref and "AnyOS" in os_distrs:
+                # Для продуктов с припиской -Doc разрешаем использование AnyOS, если конкретная ОС не найдена
+                pass
+            else:
+                self.ee.emit("Logger", f"[ERROR] No distribution found for OS: {OS} in repositories for {full_ref}")
+                self.ee.emit("UpdateHistory", NodeId, full_ref, OS, "failed")
+                return
 
         try:
             self.ee.emit("Logger", "[INFO] Fetching hash and repository...")
@@ -347,6 +359,9 @@ class ConanParser:
         return p
 
     def CheckOSDistr(self, ref:str, reps):
+        if "-Doc" in ref:
+            return {"AnyOS"}
+
         OSList = set()
         try:
             for repo in reps:
@@ -524,6 +539,7 @@ class ConanParser:
             self.ee.emit("Logger", f"[SUCCESS] Log saved to {path}r\Log.txt")
         except Exception as e:
             self.ee.emit("Logger", f"[ERROR] Failed to save log file: {e}")
+        pass
 
     def ConanStorageSize(self):
         try:

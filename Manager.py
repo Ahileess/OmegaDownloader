@@ -137,14 +137,18 @@ class Manager():
                 folder += "\\" + proj[1]
 
             osActive = ""
-            if (self.objSetting.GetOSEnable("Windows")):
-                osActive = "Windows"
-                
-            if (self.objSetting.GetOSEnable("Linux")):
-                if (osActive == "Windows"):
-                    osActive = "Both"
-                else:
-                    osActive = "Linux"
+            # Если продукт содержит "HMI-Doc", устанавливаем AnyOS
+            if "-Doc" in projName:
+                osActive = "AnyOS"
+            else:
+                if (self.objSetting.GetOSEnable("Windows")):
+                    osActive = "Windows"
+                    
+                if (self.objSetting.GetOSEnable("Linux")):
+                    if (osActive == "Windows"):
+                        osActive = "Both"
+                    else:
+                        osActive = "Linux"
 
             self.parser.DownloadDistrs(ref, osActive, self.Repo, folder, self.NodeIdCount)
             self.NodeIdCount += 1
@@ -234,7 +238,7 @@ class Manager():
     def GetUserName(self):
         return self.userName
 
-#Прослойка между бэком и фронтом. Чтобы не завязываться на прямой передачи данных
+#Прослойка между бэком и фронтом. Чтобы не зависеть от прямой передачи данных
 #По событии в conanConnection вызывает событие в GUI.
     def Logger(self, text:str): 
         self.ee.emit("OutputLog", text)
@@ -338,4 +342,3 @@ class Manager():
 
     def SaveInstallComponentToFile(self, listComponents):
         self.parser.SaveInstallComponentToFile(listComponents, self.objSetting.downloadFolder)
-
