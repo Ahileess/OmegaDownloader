@@ -118,7 +118,6 @@ class ConanParser:
     def GetBrandsForBuild(self, build_ref: str, productName: str):
         """Получает список уникальных брендов для конкретного билда из уже загруженных путей."""
         brands = set()
-        
         try:
             # Очищаем имя проекта от суффиксов для поиска в строке билда
             cleanProduct = productName.replace("-Distr", "").replace("-Distro", "")
@@ -298,6 +297,20 @@ class ConanParser:
                 shutil.copytree(pathCach/'distr//ru-RU', target_path/'rpm', dirs_exist_ok=True)
             elif (OS == "Linux"):
                 raise FileNotFoundError(f"No valid RPM files found in cache for {full_ref}")
+            
+            if ((pathCach / 'distr//pdf').exists()):
+                self.ee.emit("Logger", f"[DEBUG] Copying pdf from {pathCach / 'distr//pdf'}")
+                shutil.copytree(pathCach/'distr//pdf', target_path/'pdf', dirs_exist_ok=True)
+            elif ((pathCach / 'pdf').exists()):
+                self.ee.emit("Logger", f"[DEBUG] Copying pdf from {pathCach / 'pdf'}")
+                shutil.copytree(pathCach/'pdf', target_path/'pdf', dirs_exist_ok=True)
+
+            if ((pathCach / 'distr//web').exists()):
+                self.ee.emit("Logger", f"[DEBUG] Copying web from {pathCach / 'distr//web'}")
+                shutil.copytree(pathCach/'distr//web', target_path/'web', dirs_exist_ok=True)
+            elif ((pathCach / 'web').exists()):
+                self.ee.emit("Logger", f"[DEBUG] Copying web from {pathCach / 'web'}")
+                shutil.copytree(pathCach/'web', target_path/'web', dirs_exist_ok=True)
             
         except PermissionError:
             self.ee.emit("UpdateHistory", NodeId, ref, OS, "failed")
