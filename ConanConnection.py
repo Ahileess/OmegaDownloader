@@ -528,7 +528,7 @@ class ConanParser:
             with open(path + r'\References.txt', 'w') as f:
                 for ref in queue:
                     f.write(f"{ref}\n")
-            self.ee.emit("Logger", f"[SUCCESS] Queue saved to {path}r\References.txt")
+            self.ee.emit("Logger", f"[SUCCESS] Queue saved to {path}\References.txt")
         except Exception as e:
             self.ee.emit("Logger", f"[ERROR] Failed to save queue file: {e}")
         pass
@@ -549,7 +549,7 @@ class ConanParser:
         try:
             with open(path + r'\Log.txt', 'w') as f:
                 f.write(log)
-            self.ee.emit("Logger", f"[SUCCESS] Log saved to {path}r\Log.txt")
+            self.ee.emit("Logger", f"[SUCCESS] Log saved to {path}\Log.txt")
         except Exception as e:
             self.ee.emit("Logger", f"[ERROR] Failed to save log file: {e}")
         pass
