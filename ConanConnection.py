@@ -4,6 +4,7 @@ import pathlib
 import shutil
 import threading
 import pyperclip
+import subprocess
 from pymitter import EventEmitter
 from windows_tools.installed_software import get_installed_software
 
@@ -450,13 +451,45 @@ class ConanParser:
     
     def UninstallProcess(self, listComponents:list):
         for i in listComponents:
-            counter = 0
-            self.ee.emit("Logger", f"[INFO] Uninstalling: {i}")
-            stream = os.popen("wmic product where name=\"" + i + "\" call uninstall /nointeractive")
-            for s in stream:
-                counter += 1
-                self.ee.emit("Logger", f"{counter}0%")
-            self.ee.emit("Logger", f"[SUCCESS] Uninstalled: {i}")
+            self.ee.emit("Logger", f"[INFO] Searching for ProductCode of: {i}")
+            try:
+                # Используем Get-CimInstance вместо Get-WmiObject (современный стандарт)
+                # Оборачиваем имя в одинарные кавычки, чтобы избежать проблем с экранированием в shell=True
+                ps_cmd = f'powershell -NoProfile -ExecutionPolicy Bypass -Command "(Get-CimInstance Win32_Product | Where-Object {{ $_.Name -eq \'{i}\' }}).IdentifyingNumber"'
+                guid_proc = subprocess.run(ps_cmd, shell=True, capture_output=True, text=True)
+                product_code = guid_proc.stdout.strip()
+
+                if not product_code:
+                    self.ee.emit("Logger", f"[ERROR] Could not find ProductCode for {i}. It might not be an MSI-based installation.")
+                    continue
+
+                self.ee.emit("Logger", f"[INFO] Found ProductCode: {product_code}. Starting uninstallation...")
+                
+                # Запускаем msiexec для удаления
+                # /x - uninstall, /qn - quiet no UI, /norestart - do not restart automatically
+                result = subprocess.run(
+                    f'msiexec.exe /x {product_code} /qn /norestart',
+                    shell=True,
+                    capture_output=True,
+                    text=True
+                )
+
+                # Код 0 - успех, 3010 - успех с требованием перезагрузки
+                if result.returncode in [0, 3010]:
+                    self.ee.emit("Logger", f"[SUCCESS] Uninstalled: {i} (Exit code: {result.returncode})")
+                elif result.returncode == 1603:
+                    self.ee.emit("Logger", f"[ERROR] Failed to uninstall {i}. Error 1603: Fatal error during uninstallation.")
+                    self.ee.emit("Logger", "[HELP] Common causes for 1603:")
+                    self.ee.emit("Logger", "- Insufficient permissions (Try running the application as Administrator).")
+                    self.ee.emit("Logger", "- Files are currently in use by another process.")
+                    self.ee.emit("Logger", "- The installer is corrupted or missing required components.")
+                else:
+                    self.ee.emit("Logger", f"[ERROR] Failed to uninstall {i}. msiexec exit code: {result.returncode}")
+                    if result.stderr:
+                        self.ee.emit("Logger", f"Stderr: {result.stderr}")
+            except Exception as e:
+                self.ee.emit("Logger", f"[ERROR] Exception during uninstallation of {i}: {e}")
+
         self.ee.emit("Logger", "[SUCCESS] All uninstallation tasks finished!")
         self.ee.emit("ThreadEnd")
         pass
