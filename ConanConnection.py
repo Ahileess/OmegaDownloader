@@ -31,7 +31,7 @@ class ConanParser:
 
                     # Фильтрация для продукта Security-Distr: 
                     # исключаем все ссылки, содержащие "HMI.", чтобы не попадали билды HMI.Security.
-                    if productName == "Security-Distr" and "HMI." in ref:
+                    if (productName == "Security-Distr"or productName == "Security-Distro" or productName == "Security-Doc") and "HMI." in ref:
                         continue
 
                     if (ref.find("trei") == -1):
